@@ -1,0 +1,20 @@
+---
+log_level: trace
+ami:
+  host: localhost
+  user: admin
+  pass: admin
+  port: 5038
+dialplan:
+  incoming_context:
+  - from-pstn
+  outgoing_context:
+  - macro-dialout-trunk
+  ext_context:
+  - macro-dial-one
+  - macro-dial
+  dial_context: from-internal
+bitrix24:
+  webhook_url: https://mycrm.bitrix24.eu/rest/1/mytoken/
+  webhook_originate_token: my_originate_token
+  webhook_endpoint_addr: "127.0.0.1:5678"
