@@ -26,6 +26,7 @@ type b24 struct {
 	recUp     string
 	hasSForm  bool
 	sForm     []SForm
+	defUID    string
 }
 
 type entity struct {
@@ -94,8 +95,13 @@ func (l *b24) apiAssignedHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	e, ok := l.ent[req[1]]
-	if !ok || !isEntRegistred(e) || e.aID == "" {
+	if !ok || !isEntRegistred(e) {
 		cLog.WithField("lid", req[1]).Warn("Call not found")
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	if e.aID == "" {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -125,8 +131,13 @@ func (l *b24) Start(c *Call) {
 
 	e.mux.Lock()
 
+	uID, ok := l.eUID[c.Ext]
+	if !ok {
+		uID = l.defUID
+	}
+
 	params := map[string]string{
-		"USER_ID":      "1",
+		"USER_ID":      uID,
 		"PHONE_NUMBER": c.CID,
 		"TYPE":         getCallType(c.Dir),
 		"LINE_NUMBER":  c.DID,
@@ -181,8 +192,7 @@ func (l *b24) End(c *Call) {
 
 	uID, ok := l.eUID[c.Ext]
 	if !ok {
-		// TODO: default user ID
-		uID = "1"
+		uID = l.defUID
 	}
 
 	params := map[string]string{
@@ -343,10 +353,17 @@ func (l *b24) findContact(phone string) (map[string]string, error) {
 			continue
 		}
 
+		entType := r[0]["CRM_ENTITY_TYPE"].(string)
+
+		if entType != "CONTACT" && entType != "COMPANY" {
+			cLog.WithField("contact", r[0]).Debug("Found LEAD, skipping")
+			continue
+		}
+
 		cLog.WithField("contact", r[0]).Debug("Found")
 
 		return map[string]string{
-			"CRM_ENTITY_TYPE": r[0]["CRM_ENTITY_TYPE"].(string),
+			"CRM_ENTITY_TYPE": entType,
 			"CRM_ENTITY_ID":   fmt.Sprintf("%.0f", r[0]["CRM_ENTITY_ID"].(float64)),
 			"ASSIGNED_BY_ID":  fmt.Sprintf("%.0f", r[0]["ASSIGNED_BY_ID"].(float64)),
 		}, nil
@@ -361,7 +378,7 @@ type SForm struct {
 }
 
 // NewB24Connector func
-func NewB24Connector(url string, token string, addr string, originate OrigFunc, sForm []SForm, recUp string) Connecter {
+func NewB24Connector(url string, token string, addr string, originate OrigFunc, defUID string, recUp string, sForm []SForm) Connecter {
 	l := &b24{
 		url:       url,
 		token:     token,
@@ -371,6 +388,7 @@ func NewB24Connector(url string, token string, addr string, originate OrigFunc, 
 		eUID:      make(map[string]string),
 		ent:       make(map[string]*entity),
 		recUp:     recUp,
+		defUID:    defUID,
 	}
 
 	if len(sForm) > 0 {

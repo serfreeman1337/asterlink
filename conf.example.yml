@@ -26,6 +26,7 @@ pbx:
   - {expr: "^(\\+|)998(\\d{9})$", repl: "$2"}
   vote_ivr: "ivr-1"
 bitrix24:
+  default_user: "1"
   webhook_url: https://mycrm.bitrix24.eu/rest/1/mytoken/
   webhook_originate_token: my_originate_token
   webhook_endpoint_addr: "127.0.0.1:5678"

@@ -1,7 +1,9 @@
 package main
 
 import (
+	"crypto/tls"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"regexp"
 	"strings"
@@ -32,8 +34,9 @@ type numForm struct {
 }
 
 type conf struct {
-	LogLevel log.Level `yaml:"log_level"`
-	Ami      struct {
+	LogLevel     log.Level `yaml:"log_level"`
+	IsInvalidSSL bool      `yaml:"ignore_invalid_ssl"`
+	Ami          struct {
 		Host string
 		Port string
 		User string
@@ -62,6 +65,7 @@ type conf struct {
 		RecUp    string `yaml:"rec_upload"`
 		hasSForm bool
 		SForm    []numForm `yaml:"search_format"`
+		DefUID   string    `yaml:"default_user"`
 	} `yaml:"bitrix24"`
 }
 
@@ -136,6 +140,11 @@ func main() {
 	var cfg conf
 	cfg.getConf()
 
+	if cfg.IsInvalidSSL {
+		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		log.Info("Ignore invalid self-signed certificates")
+	}
+
 	log.WithField("level", cfg.LogLevel).Info("Setting log level")
 	log.SetLevel(cfg.LogLevel)
 
@@ -199,6 +208,7 @@ func main() {
 			"Variable": "SF_CONNECTOR=" + oID, // variable to track originated call
 			"CallerID": ext,
 			"Async":    "true",
+			"Codecs":   "alaw,ulaw", // TODO: config?
 		})
 		if err != nil {
 			cLog.Error(err)
@@ -221,7 +231,7 @@ func main() {
 			}
 		}
 
-		connector = connect.NewB24Connector(cfg.B24.URL, cfg.B24.Token, cfg.B24.Addr, originate, sForm, cfg.B24.RecUp)
+		connector = connect.NewB24Connector(cfg.B24.URL, cfg.B24.Token, cfg.B24.Addr, originate, cfg.B24.DefUID, cfg.B24.RecUp, sForm)
 	} else {
 		log.Warn("No connector selected")
 		connector = connect.NewDummyConnector()
