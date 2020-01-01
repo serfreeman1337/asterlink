@@ -14,7 +14,26 @@ dialplan:
   - macro-dial-one
   - macro-dial
   dial_context: from-internal
+pbx:
+  dids:
+  - '561600'
+  - '561610'
+  - '561620'
+  cid_format:
+  - {expr: "^\\d{9}$", repl: "+998$0"}
+  - {expr: "^\\d{7}$", repl: "+99878$0"}
+  dial_format:
+  - {expr: "^(\\+|)998(\\d{9})$", repl: "$2"}
 bitrix24:
   webhook_url: https://mycrm.bitrix24.eu/rest/1/mytoken/
   webhook_originate_token: my_originate_token
   webhook_endpoint_addr: "127.0.0.1:5678"
+  search_format:
+  - {expr: ".*", repl: "$0"}
+  - {expr: "^\\+(\\d{5})(\\d{7})$", repl: "+$1 $2"} 				# +XXXXX XXXXXXX
+  - {expr: "^\\+(\\d{5})(\\d{3})(\\d{2})(\\d{2})$", repl: "+$1 $2 $3 $4"}	# +XXXXX XXX XX XXX
+  - {expr: "^\\+(\\d{5})(\\d{3})(\\d{2})(\\d{2})$", repl: "+$1 $2-$3-$4"}	# +XXXXX XXX-XX-XXX
+  - {expr: "^\\+(\\d{5})(\\d{3})(\\d{2})(\\d{2})$", repl: "$1 $2-$3-$4"} 	# XXXXX XXX XX XX
+  - {expr: "^\\+(\\d{5})(\\d{3})(\\d{2})(\\d{2})$", repl: "$2 $3 $4"}		# XXX XX XX
+  - {expr: "^\\+(\\d{5})(\\d{3})(\\d{2})(\\d{2})$", repl: "$2-$3-$4"}		# XXX-XX-XX
+  - {expr: "^\\+(\\d{5})(\\d{3})(\\d{2})(\\d{2})$", repl: "(+$1) $2-$3-$4"}	# (+XXXXX) XXX-XX-XX

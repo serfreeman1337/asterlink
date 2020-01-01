@@ -3,7 +3,7 @@ package connect
 type du struct {
 }
 
-func (con *du) Init(originate OrigFunc) {
+func (con *du) Init() {
 }
 
 func (con *du) Start(c *Call) {

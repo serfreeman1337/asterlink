@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -21,6 +22,8 @@ type b24 struct {
 	ent       map[string]*entity
 	originate OrigFunc
 	log       *log.Entry
+	hasSForm  bool
+	sForm     []SForm
 }
 
 type entity struct {
@@ -30,11 +33,7 @@ type entity struct {
 	mux sync.Mutex
 }
 
-func (l *b24) Init(org OrigFunc) {
-	l.originate = org
-	l.eUID = make(map[string]string)
-	l.ent = make(map[string]*entity)
-
+func (l *b24) Init() {
 	l.getUsers()
 
 	if l.addr != "" {
@@ -126,7 +125,7 @@ func (l *b24) Start(c *Call) {
 
 	params := map[string]string{
 		"USER_ID":      "1",
-		"PHONE_NUMBER": formatCID(c.CID),
+		"PHONE_NUMBER": c.CID,
 		"TYPE":         getCallType(c.Dir),
 		"LINE_NUMBER":  c.DID,
 		"CRM_CREATE":   "1",
@@ -246,7 +245,6 @@ func handleDial(l *b24, c *Call, ext string, isDial bool) {
 }
 
 func (l *b24) getUsers() {
-	l.log.Info("Requesting new user list")
 	res, err := l.req("user.get", map[string]map[string]string{
 		"filter": {"USER_TYPE": "employee"},
 	})
@@ -294,18 +292,34 @@ func (l *b24) req(method string, params interface{}) (result interface{}, err er
 }
 
 func (l *b24) findContact(phone string) (map[string]string, error) {
-	pForm := []string{phone, "+" + phone}
+	var pForm []string
+
+	if !l.hasSForm {
+		pForm = []string{phone}
+	} else {
+		for _, sF := range l.sForm {
+			if !sF.R.MatchString(phone) {
+				continue
+			}
+
+			pForm = append(pForm, sF.R.ReplaceAllString(phone, sF.Repl))
+		}
+	}
 
 	for _, p := range pForm {
 		cLog := l.log.WithField("phone", p)
 		cLog.Debug("Contact search")
+
 		res, err := l.req("telephony.externalCall.searchCrmEntities", map[string]string{
 			"PHONE_NUMBER": p,
 		})
+		if err != nil {
+			continue
+		}
 
 		r := toList(res)
 
-		if err != nil || len(r) == 0 {
+		if len(r) == 0 {
 			cLog.Debug("Not found")
 			continue
 		}
@@ -321,9 +335,29 @@ func (l *b24) findContact(phone string) (map[string]string, error) {
 	return nil, errors.New("Contact not found")
 }
 
+// SForm struct
+type SForm struct {
+	R    *regexp.Regexp
+	Repl string
+}
+
 // NewB24Connector func
-func NewB24Connector(url string, token string, addr string) Connecter {
-	l := &b24{url: url, token: token, addr: addr, log: log.WithField("b24", true)}
+func NewB24Connector(url string, token string, addr string, originate OrigFunc, sForm []SForm) Connecter {
+	l := &b24{
+		url:       url,
+		token:     token,
+		addr:      addr,
+		log:       log.WithField("b24", true),
+		originate: originate,
+		eUID:      make(map[string]string),
+		ent:       make(map[string]*entity),
+	}
+
+	if len(sForm) > 0 {
+		l.hasSForm = true
+		l.sForm = sForm
+	}
+
 	return l
 }
 
@@ -354,10 +388,6 @@ func isEntRegistred(e *entity) bool {
 		return false
 	}
 	return true
-}
-
-func formatCID(phone string) string {
-	return phone
 }
 
 func getCallType(d Direction) string {

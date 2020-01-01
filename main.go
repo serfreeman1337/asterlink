@@ -25,6 +25,12 @@ func isContext(context string, of []string) bool {
 	return false
 }
 
+type numForm struct {
+	R    *regexp.Regexp
+	Expr string
+	Repl string
+}
+
 type conf struct {
 	LogLevel log.Level `yaml:"log_level"`
 	Ami      struct {
@@ -34,17 +40,26 @@ type conf struct {
 		Pass string
 	}
 	DP struct {
-		In     []string `yaml:"incoming_context"`
-		Out    []string `yaml:"outgoing_context"`
-		Ext    []string `yaml:"ext_context"`
-		Dial   string   `yaml:"dial_context"`
-		Prefix string   `yaml:"dial_prefix"`
-		DID    []string `yaml:"dids"`
+		In   []string `yaml:"incoming_context"`
+		Out  []string `yaml:"outgoing_context"`
+		Ext  []string `yaml:"ext_context"`
+		Dial string   `yaml:"dial_context"`
 	} `yaml:"dialplan"`
+	Form struct {
+		hasCid  bool
+		hasDial bool
+		hasDid  bool
+		Cid     []numForm `yaml:"cid_format"`
+		Dial    []numForm `yaml:"dial_format"`
+		LimDID  []string  `yaml:"dids"`
+		DID     map[string]bool
+	} `yaml:"pbx"`
 	B24 struct {
-		Addr  string `yaml:"webhook_endpoint_addr"`
-		URL   string `yaml:"webhook_url"`
-		Token string `yaml:"webhook_originate_token"`
+		Addr     string `yaml:"webhook_endpoint_addr"`
+		URL      string `yaml:"webhook_url"`
+		Token    string `yaml:"webhook_originate_token"`
+		hasSForm bool
+		SForm    []numForm `yaml:"search_format"`
 	} `yaml:"bitrix24"`
 }
 
@@ -61,7 +76,7 @@ func (c *conf) getConf() {
 	if c.Ami.Host == "" || c.Ami.User == "" || c.Ami.Pass == "" {
 		log.Fatal("AMI settings are missing from config file")
 	} else if len(c.DP.In) == 0 || len(c.DP.Out) == 0 || len(c.DP.Ext) == 0 || c.DP.Dial == "" {
-		log.Fatal("DialPlan contects are missing from config file")
+		log.Fatal("DialPlan configuration are missing from config file")
 	}
 
 	if c.Ami.Port == "" {
@@ -70,13 +85,49 @@ func (c *conf) getConf() {
 	if c.LogLevel == log.PanicLevel {
 		c.LogLevel = log.TraceLevel
 	}
+
+	if len(c.Form.Cid) != 0 {
+		for i, v := range c.Form.Cid {
+			if c.Form.Cid[i].R, err = regexp.Compile(v.Expr); err != nil {
+				log.Fatal(err)
+			}
+		}
+		c.Form.hasCid = true
+	}
+	if len(c.Form.Dial) != 0 {
+		for i, v := range c.Form.Dial {
+			if c.Form.Dial[i].R, err = regexp.Compile(v.Expr); err != nil {
+				log.Fatal(err)
+			}
+		}
+		c.Form.hasDial = true
+	}
+	if len(c.Form.LimDID) != 0 {
+		c.Form.hasDid = true
+		c.Form.DID = make(map[string]bool)
+
+		for _, d := range c.Form.LimDID {
+			c.Form.DID[d] = true
+		}
+	}
+
+	if c.B24.URL != "" {
+		if len(c.B24.SForm) != 0 {
+			for i, v := range c.B24.SForm {
+				if c.B24.SForm[i].R, err = regexp.Compile(v.Expr); err != nil {
+					log.Fatal(err)
+				}
+			}
+			c.B24.hasSForm = true
+		}
+	}
 }
 
 func init() {
 	log.SetFormatter(&log.TextFormatter{})
 	log.SetOutput(os.Stdout)
 
-	log.Info("AsterLink v. 0.1.0-dev")
+	log.Info("AsterLink v. 0.2.0-dev")
 }
 
 func main() {
@@ -85,16 +136,6 @@ func main() {
 
 	log.WithField("level", cfg.LogLevel).Info("Setting log level")
 	log.SetLevel(cfg.LogLevel)
-
-	var connector connect.Connecter
-
-	if cfg.B24.URL != "" {
-		log.Info("Using Bitrix24 Connector")
-		connector = connect.NewB24Connector(cfg.B24.URL, cfg.B24.Token, cfg.B24.Addr)
-	} else {
-		log.Warn("No connector selected")
-		connector = connect.NewDummyConnector()
-	}
 
 	cdr := make(map[string]*connect.Call)
 	rec := make(map[string]string)
@@ -113,12 +154,43 @@ func main() {
 		}
 	}
 
+	formatNum := func(cID string, isCid bool) (string, bool) {
+		var hasForm bool
+		var form []numForm
+		if isCid {
+			hasForm = cfg.Form.hasCid
+			form = cfg.Form.Cid
+		} else {
+			hasForm = cfg.Form.hasDial
+			form = cfg.Form.Dial
+		}
+
+		if !hasForm {
+			return cID, true
+		}
+
+		for _, f := range form {
+			if f.R.MatchString(cID) {
+				return f.R.ReplaceAllString(cID, f.Repl), true
+			}
+		}
+
+		return "", false
+	}
+
 	originate := func(ext string, dest string, oID string) {
 		cLog := log.WithFields(log.Fields{"ext": ext, "dest": dest, "oID": oID})
+		num, ok := formatNum(dest, false)
+
+		if !ok {
+			cLog.WithField("num", num).Error("Invalid number to originate call")
+			return
+		}
+
 		res, err := ami.Action(map[string]string{
 			"Action":   "Originate",
 			"Channel":  "Local/" + ext + "@" + cfg.DP.Dial,
-			"Exten":    dest,
+			"Exten":    num,
 			"Context":  cfg.DP.Dial,
 			"Priority": "1",
 			"Variable": "SF_CONNECTOR=" + oID,
@@ -126,36 +198,54 @@ func main() {
 			"Async":    "true",
 		})
 		if err != nil {
-			cLog.Warn(err)
+			cLog.Error(err)
 		} else if res["Response"] != "Success" {
-			cLog.Warn(res["Message"])
+			cLog.Error(res["Message"])
 		} else {
 			cLog.Debug("New originate request")
 		}
 	}
 
-	connector.Init(originate)
+	var connector connect.Connecter
 
-	fexpr := func(r []string) string {
-		var s string
-		if len(r) == 1 {
-			s += r[0]
-		} else {
-			s += "("
+	if cfg.B24.URL != "" {
+		log.Info("Using Bitrix24 Connector")
 
-			for _, v := range r {
-				s += v + "|"
+		var sForm []connect.SForm
+		if cfg.B24.hasSForm {
+			for _, v := range cfg.B24.SForm {
+				sForm = append(sForm, connect.SForm{R: v.R, Repl: v.Repl})
 			}
-
-			s = s[:len(s)-1]
-			s += ")"
 		}
 
-		return s
+		connector = connect.NewB24Connector(cfg.B24.URL, cfg.B24.Token, cfg.B24.Addr, originate, sForm)
+	} else {
+		log.Warn("No connector selected")
+		connector = connect.NewDummyConnector()
 	}
+
+	connector.Init()
 
 	ami.On("connect", func(message string) {
 		log.WithField("msg", message).Info("Established connection with AMI")
+
+		fexpr := func(r []string) string {
+			var s string
+			if len(r) == 1 {
+				s += r[0]
+			} else {
+				s += "("
+
+				for _, v := range r {
+					s += v + "|"
+				}
+
+				s = s[:len(s)-1]
+				s += ")"
+			}
+
+			return s
+		}
 
 		// posix regexp
 		filter := "(Event: Newchannel.*[[:cntrl:]]Context: " + fexpr(cfg.DP.In) + "[[:cntrl:]]"
@@ -176,8 +266,6 @@ func main() {
 		log.Error(message)
 	})
 
-	ami.Connect()
-
 	// incoming call
 	ami.RegisterHandler("Newchannel", func(e map[string]string) {
 		if /*_, ok := IncomingContext[e["Context"]]; !ok || */ e["Exten"] == "s" { // TODO: review this 's'!
@@ -190,11 +278,25 @@ func main() {
 			return
 		}
 
+		// DID Limit
+		if cfg.Form.hasDid {
+			if _, ok := cfg.Form.DID[e["Exten"]]; !ok {
+				log.WithFields(log.Fields{"lid": e["Linkedid"], "did": e["Exten"]}).Debug("Skip incoming call for DID")
+				return
+			}
+		}
+
+		cID, ok := formatNum(e["CallerIDNum"], true)
+		if !ok {
+			log.WithFields(log.Fields{"lid": e["Linkedid"], "cid": e["CallerIDNum"]}).Warn("Unknown incoming CallerID")
+			return
+		}
+
 		// register incoming call
 		cdr[e["Linkedid"]] = &connect.Call{
 			LID:      e["Linkedid"],
 			Dir:      connect.In,
-			CID:      e["CallerIDNum"],
+			CID:      cID,
 			DID:      e["Exten"],
 			TimeCall: time.Now(),
 			Ch:       e["Channel"],
@@ -215,11 +317,17 @@ func main() {
 				return
 			}
 
+			cID, ok := formatNum(e["ConnectedLineNum"], true)
+			if !ok {
+				log.WithFields(log.Fields{"lid": e["Linkedid"], "cid": e["CallerIDNum"]}).Warn("Unknown outgoing CallerID")
+				return
+			}
+
 			// register outbound call
 			cdr[e["Linkedid"]] = &connect.Call{
 				LID:      e["Linkedid"],
 				Dir:      connect.Out,
-				CID:      e["ConnectedLineNum"],
+				CID:      cID,
 				DID:      e["CallerIDNum"],
 				TimeCall: time.Now(),
 				TimeDial: time.Now(),
@@ -232,7 +340,7 @@ func main() {
 			cdr[e["Linkedid"]].Log.Debug("New outgoing call")
 
 			return
-		} else if c.O {
+		} else if c.O { // Originated call
 			if isContext(e["Context"], cfg.DP.Ext) {
 				c.Ch = e["DestChannel"]
 				c.Ext = e["DestCallerIDNum"]
@@ -242,6 +350,7 @@ func main() {
 
 				go connector.Dial(c, c.Ext)
 			} else if isContext(e["Context"], cfg.DP.Out) {
+				// TODO: do something about originated CallerID
 				c.ChDest = e["DestChannel"]
 				c.TimeDial = time.Now()
 				c.DID = e["DestConnectedLineNum"]
@@ -292,7 +401,7 @@ func main() {
 			go connector.Answer(c, c.Ext)
 			break
 		case connect.Out:
-			if c.O && !isContext(e["Context"], cfg.DP.Out) {
+			if c.O && !isContext(e["Context"], cfg.DP.Out) { // Originated call
 				return
 			}
 
@@ -416,6 +525,8 @@ func main() {
 		log.WithField("oid", e["Value"]).Debug("New originated call")
 		connector.OrigStart(cdr[e["Linkedid"]], e["Value"])
 	})
+
+	ami.Connect()
 
 	r := make(chan bool)
 	<-r
