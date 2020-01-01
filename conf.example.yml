@@ -24,6 +24,7 @@ pbx:
   - {expr: "^\\d{7}$", repl: "+99878$0"}
   dial_format:
   - {expr: "^(\\+|)998(\\d{9})$", repl: "$2"}
+  vote_ivr: "ivr-1"
 bitrix24:
   webhook_url: https://mycrm.bitrix24.eu/rest/1/mytoken/
   webhook_originate_token: my_originate_token

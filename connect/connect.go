@@ -28,6 +28,7 @@ type Call struct {
 	Ch         string
 	ChDest     string
 	Rec        string
+	Vote       string
 	O          bool
 	Log        *log.Entry
 }

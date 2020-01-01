@@ -44,6 +44,7 @@ type conf struct {
 		Out  []string `yaml:"outgoing_context"`
 		Ext  []string `yaml:"ext_context"`
 		Dial string   `yaml:"dial_context"`
+		Vote string   `yaml:"vote_ivr"`
 	} `yaml:"dialplan"`
 	Form struct {
 		hasCid  bool
@@ -141,6 +142,7 @@ func main() {
 	rec := make(map[string]string)
 
 	rechan := regexp.MustCompile(`.*\/(\d+)`)
+	var revote *regexp.Regexp
 
 	settings := &amigo.Settings{Host: cfg.Ami.Host, Username: cfg.Ami.User, Password: cfg.Ami.Pass, Port: cfg.Ami.Port}
 	ami := amigo.New(settings)
@@ -193,7 +195,7 @@ func main() {
 			"Exten":    num,
 			"Context":  cfg.DP.Dial,
 			"Priority": "1",
-			"Variable": "SF_CONNECTOR=" + oID,
+			"Variable": "SF_CONNECTOR=" + oID, // variable to track originated call
 			"CallerID": ext,
 			"Async":    "true",
 		})
@@ -250,7 +252,16 @@ func main() {
 		// posix regexp
 		filter := "(Event: Newchannel.*[[:cntrl:]]Context: " + fexpr(cfg.DP.In) + "[[:cntrl:]]"
 		filter += "|Event: (DialBegin|DialEnd).*[[:cntrl:]]Context: " + fexpr(append(cfg.DP.Ext, cfg.DP.Out...)) + "[[:cntrl:]]"
-		filter += "|Event: Newexten.*[[:cntrl:]]Application: MixMonitor"
+		filter += "|Event: Newexten.*[[:cntrl:]]"
+
+		if cfg.DP.Vote == "" {
+			filter += "Application: MixMonitor"
+		} else {
+			filter += "(Application: MixMonitor|Context: " + cfg.DP.Vote + "[[:cntrl:]].*AppData: CDR\\(userfield\\)=\".*rate.*\")"
+			filter += "|Variable: IVR_CONTEXT.*Value: " + cfg.DP.Vote
+			revote = regexp.MustCompile(`CDR\(userfield\)="rate:(\d+)"`)
+		}
+
 		filter += "|Event: (Hangup|BlindTransfer)|Variable: SF_CONNECTOR)"
 
 		// let the Asterisk filter events for us
@@ -443,10 +454,20 @@ func main() {
 		}
 	})
 
-	// call recording
+	// call recording and vote
 	ami.RegisterHandler("Newexten", func(e map[string]string) {
-		rec[e["Uniqueid"]] = strings.Split(e["AppData"], ",")[0]
-		log.WithFields(log.Fields{"lid": e["Linkedid"], "uid": e["Uniqueid"], "rec": rec[e["Uniqueid"]]}).Debug("MixMonitor")
+		if e["Application"] == "MixMonitor" { // recording
+			rec[e["Uniqueid"]] = strings.Split(e["AppData"], ",")[0]
+			log.WithFields(log.Fields{"lid": e["Linkedid"], "uid": e["Uniqueid"], "rec": rec[e["Uniqueid"]]}).Debug("MixMonitor")
+		} else { // vote
+			c, ok := cdr[e["Linkedid"]]
+			if !ok {
+				return
+			}
+			appData := e["AppData"][:len(e["AppData"])-1] // 3 IQ WHITESPACE TRIM
+			c.Vote = revote.ReplaceAllString(appData, "$1")
+			c.Log.WithField("vote", c.Vote).Debug("Call voted")
+		}
 	})
 
 	// TODO: AttendedTransfer
@@ -495,6 +516,16 @@ func main() {
 		}
 
 		if e["Channel"] == c.Ch || e["Channel"] == c.ChDest {
+			// call marked for vote, keep tracking after operator hangup
+			if c.Vote == "-" && !c.TimeAnswer.IsZero() && e["Channel"] == c.ChDest {
+				go connector.StopDial(c, c.Ext)
+
+				c.ChDest = ""
+				c.Log.Debug("Wait for vote")
+
+				return
+			}
+
 			c.Log.Debug("Call finished")
 			go connector.End(c)
 
@@ -507,23 +538,35 @@ func main() {
 		}
 	})
 
+	// originated call
 	ami.RegisterHandler("VarSet", func(e map[string]string) {
-		_, ok := cdr[e["Linkedid"]]
-		if ok || e["Exten"] == "failed" {
+		c, ok := cdr[e["Linkedid"]]
+		if !ok { // VarSet for originated call
+			if e["Exten"] == "failed" {
+				return
+			}
+
+			cdr[e["Linkedid"]] = &connect.Call{
+				LID:      e["Linkedid"],
+				TimeCall: time.Now(),
+				Dir:      connect.Out,
+				Ch:       e["Channel"],
+				O:        true,
+				Log:      log.WithField("lid", e["Linkedid"]),
+			}
+
+			log.WithField("oid", e["Value"]).Debug("New originated call")
+			connector.OrigStart(cdr[e["Linkedid"]], e["Value"])
+
 			return
 		}
 
-		cdr[e["Linkedid"]] = &connect.Call{
-			LID:      e["Linkedid"],
-			TimeCall: time.Now(),
-			Dir:      connect.Out,
-			Ch:       e["Channel"],
-			O:        true,
-			Log:      log.WithField("lid", e["Linkedid"]),
+		if cfg.DP.Vote == "" || e["Value"] != cfg.DP.Vote {
+			return
 		}
 
-		log.WithField("oid", e["Value"]).Debug("New originated call")
-		connector.OrigStart(cdr[e["Linkedid"]], e["Value"])
+		// Mark call for vote
+		c.Vote = "-"
 	})
 
 	ami.Connect()

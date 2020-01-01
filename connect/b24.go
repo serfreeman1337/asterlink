@@ -196,6 +196,10 @@ func (l *b24) End(c *Call) {
 		params["STATUS_CODE"] = "304"
 	}
 
+	if c.Vote != "" && c.Vote != "-" {
+		params["VOTE"] = c.Vote
+	}
+
 	res, err := l.req("telephony.externalcall.finish", params)
 
 	// TODO: HANDLE ERROR!!!!
