@@ -29,6 +29,7 @@ bitrix24:
   webhook_url: https://mycrm.bitrix24.eu/rest/1/mytoken/
   webhook_originate_token: my_originate_token
   webhook_endpoint_addr: "127.0.0.1:5678"
+  rec_upload: "http://mypbx.example.org/recfiles/"
   search_format:
   - {expr: ".*", repl: "$0"}
   - {expr: "^\\+(\\d{5})(\\d{7})$", repl: "+$1 $2"} 				# +XXXXX XXXXXXX

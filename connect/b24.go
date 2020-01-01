@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"path"
 	"regexp"
 	"strings"
 	"sync"
@@ -22,6 +23,7 @@ type b24 struct {
 	ent       map[string]*entity
 	originate OrigFunc
 	log       *log.Entry
+	recUp     string
 	hasSForm  bool
 	sForm     []SForm
 }
@@ -209,6 +211,19 @@ func (l *b24) End(c *Call) {
 
 	r := toRes(res)
 
+	// upload recording
+	if l.recUp != "" && !c.TimeAnswer.IsZero() && c.Rec != "" {
+		file := path.Base(c.Rec)
+		url := l.recUp + c.Rec
+
+		e.log.WithFields(log.Fields{url: url}).Debug("Attaching call record")
+		l.req("telephony.externalCall.attachRecord", map[string]string{
+			"CALL_ID":    e.ID,
+			"FILENAME":   file,
+			"RECORD_URL": url,
+		})
+	}
+
 	if r["CALL_FAILED_CODE"] == "304" && r["CRM_ENTITY_TYPE"] == "LEAD" {
 		l.req("crm.lead.update", map[string]interface{}{
 			"id": fmt.Sprintf("%.0f", r["CRM_ENTITY_ID"].(float64)),
@@ -346,7 +361,7 @@ type SForm struct {
 }
 
 // NewB24Connector func
-func NewB24Connector(url string, token string, addr string, originate OrigFunc, sForm []SForm) Connecter {
+func NewB24Connector(url string, token string, addr string, originate OrigFunc, sForm []SForm, recUp string) Connecter {
 	l := &b24{
 		url:       url,
 		token:     token,
@@ -355,6 +370,7 @@ func NewB24Connector(url string, token string, addr string, originate OrigFunc, 
 		originate: originate,
 		eUID:      make(map[string]string),
 		ent:       make(map[string]*entity),
+		recUp:     recUp,
 	}
 
 	if len(sForm) > 0 {

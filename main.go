@@ -59,6 +59,7 @@ type conf struct {
 		Addr     string `yaml:"webhook_endpoint_addr"`
 		URL      string `yaml:"webhook_url"`
 		Token    string `yaml:"webhook_originate_token"`
+		RecUp    string `yaml:"rec_upload"`
 		hasSForm bool
 		SForm    []numForm `yaml:"search_format"`
 	} `yaml:"bitrix24"`
@@ -128,7 +129,7 @@ func init() {
 	log.SetFormatter(&log.TextFormatter{})
 	log.SetOutput(os.Stdout)
 
-	log.Info("AsterLink v. 0.2.0-dev")
+	log.Info("AsterLink v. 0.1.0-dev")
 }
 
 func main() {
@@ -220,7 +221,7 @@ func main() {
 			}
 		}
 
-		connector = connect.NewB24Connector(cfg.B24.URL, cfg.B24.Token, cfg.B24.Addr, originate, sForm)
+		connector = connect.NewB24Connector(cfg.B24.URL, cfg.B24.Token, cfg.B24.Addr, originate, sForm, cfg.B24.RecUp)
 	} else {
 		log.Warn("No connector selected")
 		connector = connect.NewDummyConnector()
