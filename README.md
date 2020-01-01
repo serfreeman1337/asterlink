@@ -13,8 +13,10 @@ Default configuration is tested to work with FreePBX v14 and Asterisk v13.
 ## Bitrix24 Integration
 ### Basic setup
 * Bitrix24 -> Applications -> Webhooks -> Add inbound webhook
-* Access permissions - check **crm**, **telephony**, **user**
-* Copy "**REST call example URL**" ***without*** "*profile/*" to **webhook_url** in config
+  * Access permissions - check **crm**, **telephony**, **user**
+  * Copy "**REST call example URL**" ***without*** "*profile/*" to **webhook_url** in config
+* Bitrix24 -> Telephony -> Configure telephony -> Telephony users
+  * Configure extensions for users
 ###  Call originations from Bitrix24
 * Configure **webhook_endpoint_addr** in config
 * Bitrix24 -> Applications -> Webhooks -> Add outbound webhook
@@ -23,8 +25,6 @@ Default configuration is tested to work with FreePBX v14 and Asterisk v13.
   * Copy "**Authentication code**" to **webhook_originate_token** in config
 * Bitrix24 -> Telephony -> Configure telephony -> Telephony settings
   * Default number for outgoing calls - Select your outbound hook
- * Bitrix24 -> Telephony -> Configure telephony -> Telephony users
-   * Configure extensions for users
 ### Forwarding calls to assigned user
 Dialplan example:
 ```
