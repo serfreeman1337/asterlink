@@ -129,11 +129,17 @@ func (c *conf) getConf() {
 	}
 }
 
+var (
+	version  string
+	build    string
+	compiled string
+)
+
 func init() {
 	log.SetFormatter(&log.TextFormatter{})
 	log.SetOutput(os.Stdout)
 
-	log.Info("AsterLink v. 0.1.0-dev")
+	log.WithFields(log.Fields{"ver": version, "build": build, "compiled": compiled}).Info("AsterLink")
 }
 
 func main() {
@@ -341,7 +347,7 @@ func main() {
 
 			cID, ok := formatNum(e["ConnectedLineNum"], true)
 			if !ok {
-				log.WithFields(log.Fields{"lid": e["Linkedid"], "cid": e["CallerIDNum"]}).Warn("Unknown outgoing CallerID")
+				log.WithFields(log.Fields{"lid": e["Linkedid"], "cid": e["ConnectedLineNum"]}).Warn("Unknown outgoing CallerID")
 				return
 			}
 
@@ -358,7 +364,6 @@ func main() {
 				Log:      log.WithField("lid", e["Linkedid"]),
 			}
 
-			// fmt.Println(e)
 			cdr[e["Linkedid"]].Log.Debug("New outgoing call")
 
 			return
@@ -552,8 +557,9 @@ func main() {
 	// originated call
 	ami.RegisterHandler("VarSet", func(e map[string]string) {
 		c, ok := cdr[e["Linkedid"]]
-		if !ok { // VarSet for originated call
-			if e["Exten"] == "failed" {
+		if !ok {
+			// VarSet for originated call
+			if e["Variable"] != "SF_CONNECTOR" || e["Exten"] == "failed" {
 				return
 			}
 
