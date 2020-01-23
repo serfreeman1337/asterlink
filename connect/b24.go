@@ -272,7 +272,6 @@ func (b *b24) getUsers() {
 		"filter": {"USER_TYPE": "employee"},
 	})
 	if err != nil {
-		b.log.Error(err)
 		return
 	}
 
@@ -292,21 +291,22 @@ func (b *b24) req(method string, params interface{}) (result interface{}, err er
 		return
 	}
 	b.log.WithFields(log.Fields{"method": method}).Trace(params)
-	resp, err := http.Post(b.cfg.URL+method+"/", "application/json", bytes.NewBuffer(bytRep))
 
+	res, err := http.Post(b.cfg.URL+method+"/", "application/json", bytes.NewBuffer(bytRep))
 	if err != nil {
 		b.log.Error(err)
 		return
 	}
+	defer res.Body.Close()
 
-	if resp.StatusCode != 200 {
-		err = errors.New(resp.Status)
+	if res.StatusCode != http.StatusOK {
+		err = errors.New(res.Status)
 		b.log.Error(err)
 		return
 	}
 
 	var v map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&v)
+	json.NewDecoder(res.Body).Decode(&v)
 	result = v["result"]
 
 	b.log.WithFields(log.Fields{"method": method}).Trace(result)
@@ -315,21 +315,21 @@ func (b *b24) req(method string, params interface{}) (result interface{}, err er
 }
 
 func (b *b24) findContact(phone string) (map[string]string, error) {
-	var pForm []string
+	var num []string
 
 	if !b.cfg.HasFindForm {
-		pForm = []string{phone}
+		num = []string{phone}
 	} else {
-		for _, sF := range b.cfg.FindForm {
-			if !sF.R.MatchString(phone) {
+		for _, ff := range b.cfg.FindForm {
+			if !ff.R.MatchString(phone) {
 				continue
 			}
 
-			pForm = append(pForm, sF.R.ReplaceAllString(phone, sF.Repl))
+			num = append(num, ff.R.ReplaceAllString(phone, ff.Repl))
 		}
 	}
 
-	for _, p := range pForm {
+	for _, p := range num {
 		cLog := b.log.WithField("phone", p)
 		cLog.Debug("Contact search")
 
