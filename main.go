@@ -17,23 +17,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func isContext(context string, of []string) bool {
-	for _, v := range of {
-		if context == v {
-			return true
-		}
-	}
-
-	return false
-}
-
 type numForm struct {
 	R    *regexp.Regexp
 	Expr string
 	Repl string
 }
 
-type conf struct {
+type config struct {
 	LogLevel     log.Level `yaml:"log_level"`
 	IsInvalidSSL bool      `yaml:"ignore_invalid_ssl"`
 	Ami          struct {
@@ -58,73 +48,65 @@ type conf struct {
 		LimDID  []string  `yaml:"dids"`
 		DID     map[string]bool
 	} `yaml:"pbx"`
-	B24 struct {
-		Addr     string `yaml:"webhook_endpoint_addr"`
-		URL      string `yaml:"webhook_url"`
-		Token    string `yaml:"webhook_originate_token"`
-		RecUp    string `yaml:"rec_upload"`
-		hasSForm bool
-		SForm    []numForm `yaml:"search_format"`
-		DefUID   string    `yaml:"default_user"`
-	} `yaml:"bitrix24"`
+	B24 connect.B24Config `yaml:"bitrix24"`
 }
 
-func (c *conf) getConf() {
+func (cfg *config) getConf() {
 	yamlFile, err := ioutil.ReadFile("conf.yml")
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = yaml.Unmarshal(yamlFile, c)
+	err = yaml.Unmarshal(yamlFile, cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if c.Ami.Host == "" || c.Ami.User == "" || c.Ami.Pass == "" {
+	if cfg.Ami.Host == "" || cfg.Ami.User == "" || cfg.Ami.Pass == "" {
 		log.Fatal("AMI settings are missing from config file")
-	} else if len(c.DP.In) == 0 || len(c.DP.Out) == 0 || len(c.DP.Ext) == 0 || c.DP.Dial == "" {
+	} else if len(cfg.DP.In) == 0 || len(cfg.DP.Out) == 0 || len(cfg.DP.Ext) == 0 || cfg.DP.Dial == "" {
 		log.Fatal("DialPlan configuration are missing from config file")
 	}
 
-	if c.Ami.Port == "" {
-		c.Ami.Port = "5038"
+	if cfg.Ami.Port == "" {
+		cfg.Ami.Port = "5038"
 	}
-	if c.LogLevel == log.PanicLevel {
-		c.LogLevel = log.TraceLevel
+	if cfg.LogLevel == log.PanicLevel {
+		cfg.LogLevel = log.TraceLevel
 	}
 
-	if len(c.Form.Cid) != 0 {
-		for i, v := range c.Form.Cid {
-			if c.Form.Cid[i].R, err = regexp.Compile(v.Expr); err != nil {
+	if len(cfg.Form.Cid) != 0 {
+		for i, v := range cfg.Form.Cid {
+			if cfg.Form.Cid[i].R, err = regexp.Compile(v.Expr); err != nil {
 				log.Fatal(err)
 			}
 		}
-		c.Form.hasCid = true
+		cfg.Form.hasCid = true
 	}
-	if len(c.Form.Dial) != 0 {
-		for i, v := range c.Form.Dial {
-			if c.Form.Dial[i].R, err = regexp.Compile(v.Expr); err != nil {
+	if len(cfg.Form.Dial) != 0 {
+		for i, v := range cfg.Form.Dial {
+			if cfg.Form.Dial[i].R, err = regexp.Compile(v.Expr); err != nil {
 				log.Fatal(err)
 			}
 		}
-		c.Form.hasDial = true
+		cfg.Form.hasDial = true
 	}
-	if len(c.Form.LimDID) != 0 {
-		c.Form.hasDid = true
-		c.Form.DID = make(map[string]bool)
+	if len(cfg.Form.LimDID) != 0 {
+		cfg.Form.hasDid = true
+		cfg.Form.DID = make(map[string]bool)
 
-		for _, d := range c.Form.LimDID {
-			c.Form.DID[d] = true
+		for _, d := range cfg.Form.LimDID {
+			cfg.Form.DID[d] = true
 		}
 	}
 
-	if c.B24.URL != "" {
-		if len(c.B24.SForm) != 0 {
-			for i, v := range c.B24.SForm {
-				if c.B24.SForm[i].R, err = regexp.Compile(v.Expr); err != nil {
+	if cfg.B24.URL != "" {
+		if len(cfg.B24.FindForm) != 0 {
+			for i, v := range cfg.B24.FindForm {
+				if cfg.B24.FindForm[i].R, err = regexp.Compile(v.Expr); err != nil {
 					log.Fatal(err)
 				}
 			}
-			c.B24.hasSForm = true
+			cfg.B24.HasFindForm = true
 		}
 	}
 }
@@ -135,7 +117,7 @@ func main() {
 
 	log.Info("AsterLink")
 
-	var cfg conf
+	var cfg config
 	cfg.getConf()
 
 	if cfg.IsInvalidSSL {
@@ -148,9 +130,6 @@ func main() {
 
 	cdr := make(map[string]*connect.Call)
 	rec := make(map[string]string)
-
-	rechan := regexp.MustCompile(`.*\/(\d+)`)
-	var revote *regexp.Regexp
 
 	settings := &amigo.Settings{Host: cfg.Ami.Host, Username: cfg.Ami.User, Password: cfg.Ami.Pass, Port: cfg.Ami.Port}
 	ami := amigo.New(settings)
@@ -188,6 +167,16 @@ func main() {
 		return "", false
 	}
 
+	isContext := func(context string, of []string) bool {
+		for _, v := range of {
+			if context == v {
+				return true
+			}
+		}
+
+		return false
+	}
+
 	originate := func(ext string, dest string, oID string) {
 		cLog := log.WithFields(log.Fields{"ext": ext, "dest": dest, "oID": oID})
 		num, ok := formatNum(dest, false)
@@ -217,19 +206,14 @@ func main() {
 		}
 	}
 
+	rechan := regexp.MustCompile(`.*\/(\d+)`)
+	var revote *regexp.Regexp
+
 	var connector connect.Connecter
 
 	if cfg.B24.URL != "" {
 		log.Info("Using Bitrix24 Connector")
-
-		var sForm []connect.SForm
-		if cfg.B24.hasSForm {
-			for _, v := range cfg.B24.SForm {
-				sForm = append(sForm, connect.SForm{R: v.R, Repl: v.Repl})
-			}
-		}
-
-		connector = connect.NewB24Connector(cfg.B24.URL, cfg.B24.Token, cfg.B24.Addr, originate, cfg.B24.DefUID, cfg.B24.RecUp, sForm)
+		connector = connect.NewB24Connector(&cfg.B24, originate)
 	} else {
 		log.Warn("No connector selected")
 		connector = connect.NewDummyConnector()

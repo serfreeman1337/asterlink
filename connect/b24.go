@@ -15,18 +15,27 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// B24Config struct
+type B24Config struct {
+	Addr        string `yaml:"webhook_endpoint_addr"`
+	URL         string `yaml:"webhook_url"`
+	Token       string `yaml:"webhook_originate_token"`
+	RecUp       string `yaml:"rec_upload"`
+	HasFindForm bool
+	FindForm    []struct {
+		R    *regexp.Regexp
+		Expr string
+		Repl string
+	} `yaml:"search_format"`
+	DefUID string `yaml:"default_user"`
+}
+
 type b24 struct {
-	url       string
-	token     string
-	addr      string
+	cfg       *B24Config
 	eUID      map[string]string
 	ent       map[string]*entity
 	originate OrigFunc
 	log       *log.Entry
-	recUp     string
-	hasSForm  bool
-	sForm     []SForm
-	defUID    string
 }
 
 type entity struct {
@@ -36,28 +45,28 @@ type entity struct {
 	mux sync.Mutex
 }
 
-func (l *b24) Init() {
-	l.getUsers()
+func (b *b24) Init() {
+	b.getUsers()
 
-	if l.addr != "" {
-		http.HandleFunc("/assigned/", l.apiAssignedHandler)
-		http.HandleFunc("/originate/", l.apiOriginateHandler)
+	if b.cfg.Addr != "" {
+		http.HandleFunc("/assigned/", b.apiAssignedHandler)
+		http.HandleFunc("/originate/", b.apiOriginateHandler)
 		go func() {
-			l.log.WithField("addr", l.addr).Info("Enabling web server")
-			err := http.ListenAndServe(l.addr, nil)
+			b.log.WithField("addr", b.cfg.Addr).Info("Enabling web server")
+			err := http.ListenAndServe(b.cfg.Addr, nil)
 			if err != nil {
-				l.log.Fatal(err)
+				b.log.Fatal(err)
 			}
 		}()
 	}
 }
 
-func (l *b24) OrigStart(c *Call, oID string) {
-	l.ent[c.LID] = &entity{ID: oID, log: l.log.WithField("lid", c.LID)}
+func (b *b24) OrigStart(c *Call, oID string) {
+	b.ent[c.LID] = &entity{ID: oID, log: b.log.WithField("lid", c.LID)}
 }
 
-func (l *b24) apiOriginateHandler(w http.ResponseWriter, r *http.Request) {
-	cLog := l.log.WithField("api", "originate")
+func (b *b24) apiOriginateHandler(w http.ResponseWriter, r *http.Request) {
+	cLog := b.log.WithField("api", "originate")
 
 	if r.Method != "POST" {
 		cLog.WithField("methid", r.Method).Warn("Invalid method, only POST is allowed")
@@ -67,25 +76,25 @@ func (l *b24) apiOriginateHandler(w http.ResponseWriter, r *http.Request) {
 
 	r.ParseForm()
 
-	if r.FormValue("auth[application_token]") != l.token {
+	if r.FormValue("auth[application_token]") != b.cfg.Token {
 		cLog.WithField("remote_addr", r.RemoteAddr).Warn("Invalid webhook token")
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 
-	ext, ok := l.uIDtoExt(r.FormValue("data[USER_ID]"))
+	ext, ok := b.uIDtoExt(r.FormValue("data[USER_ID]"))
 	if !ok {
 		cLog.WithField("uid", r.FormValue("data[USER_ID]")).Warn("Extension not found for user id")
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	l.originate(ext, r.FormValue("data[PHONE_NUMBER_INTERNATIONAL]"), r.FormValue("data[CALL_ID]"))
+	b.originate(ext, r.FormValue("data[PHONE_NUMBER_INTERNATIONAL]"), r.FormValue("data[CALL_ID]"))
 
 	w.WriteHeader(http.StatusBadRequest)
 }
 
-func (l *b24) apiAssignedHandler(w http.ResponseWriter, r *http.Request) {
-	cLog := l.log.WithField("api", "assigned")
+func (b *b24) apiAssignedHandler(w http.ResponseWriter, r *http.Request) {
+	cLog := b.log.WithField("api", "assigned")
 	req := strings.Split(r.RequestURI, "/")[1:]
 
 	if len(req[1]) == 0 {
@@ -94,7 +103,7 @@ func (l *b24) apiAssignedHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	e, ok := l.ent[req[1]]
+	e, ok := b.ent[req[1]]
 	if !ok || !isEntRegistred(e) {
 		cLog.WithField("lid", req[1]).Warn("Call not found")
 		w.WriteHeader(http.StatusNotFound)
@@ -106,7 +115,7 @@ func (l *b24) apiAssignedHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ext, ok := l.uIDtoExt(e.aID)
+	ext, ok := b.uIDtoExt(e.aID)
 	if !ok {
 		cLog.WithField("uid", e.aID).Warn("Extension not found for user id")
 		w.WriteHeader(http.StatusNotFound)
@@ -116,8 +125,8 @@ func (l *b24) apiAssignedHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%s", ext)
 }
 
-func (l *b24) uIDtoExt(uID string) (string, bool) {
-	for k, v := range l.eUID {
+func (b *b24) uIDtoExt(uID string) (string, bool) {
+	for k, v := range b.eUID {
 		if v == uID {
 			return k, true
 		}
@@ -125,15 +134,15 @@ func (l *b24) uIDtoExt(uID string) (string, bool) {
 	return "", false
 }
 
-func (l *b24) Start(c *Call) {
-	l.ent[c.LID] = &entity{log: l.log.WithField("lid", c.LID)}
-	e := l.ent[c.LID]
+func (b *b24) Start(c *Call) {
+	b.ent[c.LID] = &entity{log: b.log.WithField("lid", c.LID)}
+	e := b.ent[c.LID]
 
 	e.mux.Lock()
 
-	uID, ok := l.eUID[c.Ext]
+	uID, ok := b.eUID[c.Ext]
 	if !ok {
-		uID = l.defUID
+		uID = b.cfg.DefUID
 	}
 
 	params := map[string]string{
@@ -143,7 +152,7 @@ func (l *b24) Start(c *Call) {
 		"LINE_NUMBER":  c.DID,
 	}
 
-	if contact, err := l.findContact(params["PHONE_NUMBER"]); err == nil {
+	if contact, err := b.findContact(params["PHONE_NUMBER"]); err == nil {
 		for k, v := range contact {
 			if k == "ASSIGNED_BY_ID" {
 				e.aID = v
@@ -153,10 +162,10 @@ func (l *b24) Start(c *Call) {
 		}
 	}
 
-	res, err := l.req("telephony.externalcall.register", params)
+	res, err := b.req("telephony.externalcalb.register", params)
 	// TODO: ERROR HANDLING!!!
 	if err != nil {
-		delete(l.ent, c.LID)
+		delete(b.ent, c.LID)
 		e.mux.Unlock()
 
 		return
@@ -169,27 +178,27 @@ func (l *b24) Start(c *Call) {
 	e.mux.Unlock()
 }
 
-func (l *b24) Dial(c *Call, ext string) {
-	handleDial(l, c, ext, true)
+func (b *b24) Dial(c *Call, ext string) {
+	handleDial(b, c, ext, true)
 }
 
-func (l *b24) StopDial(c *Call, ext string) {
-	handleDial(l, c, ext, false)
+func (b *b24) StopDial(c *Call, ext string) {
+	handleDial(b, c, ext, false)
 }
 
-func (l *b24) Answer(c *Call, ext string) {
+func (b *b24) Answer(c *Call, ext string) {
 }
 
-func (l *b24) End(c *Call) {
-	e, ok := l.ent[c.LID]
+func (b *b24) End(c *Call) {
+	e, ok := b.ent[c.LID]
 	if !ok || !isEntRegistred(e) {
 		return
 	}
-	defer delete(l.ent, c.CID)
+	defer delete(b.ent, c.CID)
 
-	uID, ok := l.eUID[c.Ext]
+	uID, ok := b.eUID[c.Ext]
 	if !ok {
-		uID = l.defUID
+		uID = b.cfg.DefUID
 	}
 
 	params := map[string]string{
@@ -209,7 +218,7 @@ func (l *b24) End(c *Call) {
 		params["VOTE"] = c.Vote
 	}
 
-	_, err := l.req("telephony.externalcall.finish", params)
+	_, err := b.req("telephony.externalcalb.finish", params)
 
 	// TODO: HANDLE ERROR!!!!
 	if err != nil {
@@ -217,12 +226,12 @@ func (l *b24) End(c *Call) {
 	}
 
 	// upload recording
-	if l.recUp != "" && !c.TimeAnswer.IsZero() && c.Rec != "" {
+	if b.cfg.RecUp != "" && !c.TimeAnswer.IsZero() && c.Rec != "" {
 		file := path.Base(c.Rec)
-		url := l.recUp + c.Rec
+		url := b.cfg.RecUp + c.Rec
 
 		e.log.WithFields(log.Fields{url: url}).Debug("Attaching call record")
-		l.req("telephony.externalCall.attachRecord", map[string]string{
+		b.req("telephony.externalCalb.attachRecord", map[string]string{
 			"CALL_ID":    e.ID,
 			"FILENAME":   file,
 			"RECORD_URL": url,
@@ -232,19 +241,19 @@ func (l *b24) End(c *Call) {
 	// delete(ent, c.LID)
 }
 
-func handleDial(l *b24, c *Call, ext string, isDial bool) {
-	e, ok := l.ent[c.LID]
+func handleDial(b *b24, c *Call, ext string, isDial bool) {
+	e, ok := b.ent[c.LID]
 	if !ok || !isEntRegistred(e) {
 		return
 	}
 
-	uID, ok := l.eUID[ext]
+	uID, ok := b.eUID[ext]
 	if !ok {
 		e.log.WithField("ext", ext).Warn("Cannot find user id for extension")
 		return
 	}
 
-	method := "telephony.externalcall."
+	method := "telephony.externalcalb."
 
 	if isDial {
 		method += "show"
@@ -252,47 +261,47 @@ func handleDial(l *b24, c *Call, ext string, isDial bool) {
 		method += "hide"
 	}
 
-	l.req(method, map[string]string{
+	b.req(method, map[string]string{
 		"CALL_ID": e.ID,
 		"USER_ID": uID,
 	})
 }
 
-func (l *b24) getUsers() {
-	res, err := l.req("user.get", map[string]map[string]string{
+func (b *b24) getUsers() {
+	res, err := b.req("user.get", map[string]map[string]string{
 		"filter": {"USER_TYPE": "employee"},
 	})
 	if err != nil {
-		l.log.Error(err)
+		b.log.Error(err)
 		return
 	}
 
 	for _, v := range toList(res) {
 		if v["UF_PHONE_INNER"] != nil {
-			l.eUID[v["UF_PHONE_INNER"].(string)] = v["ID"].(string)
+			b.eUID[v["UF_PHONE_INNER"].(string)] = v["ID"].(string)
 		}
 	}
 
-	l.log.WithField("users", l.eUID).Info("User list updated")
+	b.log.WithField("users", b.eUID).Info("User list updated")
 }
 
-func (l *b24) req(method string, params interface{}) (result interface{}, err error) {
+func (b *b24) req(method string, params interface{}) (result interface{}, err error) {
 	bytRep, err := json.Marshal(params)
 	if err != nil {
-		l.log.Error(err)
+		b.log.Error(err)
 		return
 	}
-	l.log.WithFields(log.Fields{"method": method}).Trace(params)
-	resp, err := http.Post(l.url+method+"/", "application/json", bytes.NewBuffer(bytRep))
+	b.log.WithFields(log.Fields{"method": method}).Trace(params)
+	resp, err := http.Post(b.cfg.URL+method+"/", "application/json", bytes.NewBuffer(bytRep))
 
 	if err != nil {
-		l.log.Error(err)
+		b.log.Error(err)
 		return
 	}
 
 	if resp.StatusCode != 200 {
 		err = errors.New(resp.Status)
-		l.log.Error(err)
+		b.log.Error(err)
 		return
 	}
 
@@ -300,18 +309,18 @@ func (l *b24) req(method string, params interface{}) (result interface{}, err er
 	json.NewDecoder(resp.Body).Decode(&v)
 	result = v["result"]
 
-	l.log.WithFields(log.Fields{"method": method}).Trace(result)
+	b.log.WithFields(log.Fields{"method": method}).Trace(result)
 
 	return
 }
 
-func (l *b24) findContact(phone string) (map[string]string, error) {
+func (b *b24) findContact(phone string) (map[string]string, error) {
 	var pForm []string
 
-	if !l.hasSForm {
+	if !b.cfg.HasFindForm {
 		pForm = []string{phone}
 	} else {
-		for _, sF := range l.sForm {
+		for _, sF := range b.cfg.FindForm {
 			if !sF.R.MatchString(phone) {
 				continue
 			}
@@ -321,10 +330,10 @@ func (l *b24) findContact(phone string) (map[string]string, error) {
 	}
 
 	for _, p := range pForm {
-		cLog := l.log.WithField("phone", p)
+		cLog := b.log.WithField("phone", p)
 		cLog.Debug("Contact search")
 
-		res, err := l.req("telephony.externalCall.searchCrmEntities", map[string]string{
+		res, err := b.req("telephony.externalCalb.searchCrmEntities", map[string]string{
 			"PHONE_NUMBER": p,
 		})
 		if err != nil {
@@ -338,6 +347,7 @@ func (l *b24) findContact(phone string) (map[string]string, error) {
 			continue
 		}
 
+		// TODO: handle multiple crm entitites
 		cLog.WithField("contact", r[0]).Debug("Found")
 
 		return map[string]string{
@@ -349,32 +359,17 @@ func (l *b24) findContact(phone string) (map[string]string, error) {
 	return nil, errors.New("Contact not found")
 }
 
-// SForm struct
-type SForm struct {
-	R    *regexp.Regexp
-	Repl string
-}
-
 // NewB24Connector func
-func NewB24Connector(url string, token string, addr string, originate OrigFunc, defUID string, recUp string, sForm []SForm) Connecter {
-	l := &b24{
-		url:       url,
-		token:     token,
-		addr:      addr,
+func NewB24Connector(cfg *B24Config, originate OrigFunc) Connecter {
+	b := &b24{
+		cfg:       cfg,
 		log:       log.WithField("b24", true),
 		originate: originate,
 		eUID:      make(map[string]string),
 		ent:       make(map[string]*entity),
-		recUp:     recUp,
-		defUID:    defUID,
 	}
 
-	if len(sForm) > 0 {
-		l.hasSForm = true
-		l.sForm = sForm
-	}
-
-	return l
+	return b
 }
 
 func toRes(res interface{}) map[string]interface{} {
