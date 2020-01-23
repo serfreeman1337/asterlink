@@ -141,7 +141,6 @@ func (l *b24) Start(c *Call) {
 		"PHONE_NUMBER": c.CID,
 		"TYPE":         getCallType(c.Dir),
 		"LINE_NUMBER":  c.DID,
-		"CRM_CREATE":   "1",
 	}
 
 	if contact, err := l.findContact(params["PHONE_NUMBER"]); err == nil {
@@ -152,8 +151,6 @@ func (l *b24) Start(c *Call) {
 
 			params[k] = v
 		}
-
-		delete(params, "CRM_CREATE")
 	}
 
 	res, err := l.req("telephony.externalcall.register", params)
@@ -212,14 +209,12 @@ func (l *b24) End(c *Call) {
 		params["VOTE"] = c.Vote
 	}
 
-	res, err := l.req("telephony.externalcall.finish", params)
+	_, err := l.req("telephony.externalcall.finish", params)
 
 	// TODO: HANDLE ERROR!!!!
 	if err != nil {
 		return
 	}
-
-	r := toRes(res)
 
 	// upload recording
 	if l.recUp != "" && !c.TimeAnswer.IsZero() && c.Rec != "" {
@@ -234,16 +229,6 @@ func (l *b24) End(c *Call) {
 		})
 	}
 
-	if r["CALL_FAILED_CODE"] == "304" && r["CRM_ENTITY_TYPE"] == "LEAD" {
-		l.req("crm.lead.update", map[string]interface{}{
-			"id": fmt.Sprintf("%.0f", r["CRM_ENTITY_ID"].(float64)),
-			"fields": map[string]string{
-				"TITLE":     r["PHONE_NUMBER"].(string) + " - Пропущенный звонок",
-				"STATUS_ID": "NEW",
-			},
-			"params": map[string]string{"REGISTER_SONET_EVENT": "Y"},
-		})
-	}
 	// delete(ent, c.LID)
 }
 
@@ -353,17 +338,10 @@ func (l *b24) findContact(phone string) (map[string]string, error) {
 			continue
 		}
 
-		entType := r[0]["CRM_ENTITY_TYPE"].(string)
-
-		if entType != "CONTACT" && entType != "COMPANY" {
-			cLog.WithField("contact", r[0]).Debug("Found LEAD, skipping")
-			continue
-		}
-
 		cLog.WithField("contact", r[0]).Debug("Found")
 
 		return map[string]string{
-			"CRM_ENTITY_TYPE": entType,
+			"CRM_ENTITY_TYPE": r[0]["CRM_ENTITY_TYPE"].(string),
 			"CRM_ENTITY_ID":   fmt.Sprintf("%.0f", r[0]["CRM_ENTITY_ID"].(float64)),
 			"ASSIGNED_BY_ID":  fmt.Sprintf("%.0f", r[0]["ASSIGNED_BY_ID"].(float64)),
 		}, nil

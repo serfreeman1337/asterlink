@@ -129,20 +129,12 @@ func (c *conf) getConf() {
 	}
 }
 
-var (
-	version  string
-	build    string
-	compiled string
-)
-
-func init() {
+func main() {
 	log.SetFormatter(&log.TextFormatter{})
 	log.SetOutput(os.Stdout)
 
-	log.WithFields(log.Fields{"ver": version, "build": build, "compiled": compiled}).Info("AsterLink")
-}
+	log.Info("AsterLink")
 
-func main() {
 	var cfg conf
 	cfg.getConf()
 
