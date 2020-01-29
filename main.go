@@ -1,9 +1,7 @@
 package main
 
 import (
-	"crypto/tls"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"regexp"
 	"strings"
@@ -24,9 +22,8 @@ type numForm struct {
 }
 
 type config struct {
-	LogLevel     log.Level `yaml:"log_level"`
-	IsInvalidSSL bool      `yaml:"ignore_invalid_ssl"`
-	Ami          struct {
+	LogLevel log.Level `yaml:"log_level"`
+	Ami      struct {
 		Host string
 		Port string
 		User string
@@ -119,11 +116,6 @@ func main() {
 
 	var cfg config
 	cfg.getConf()
-
-	if cfg.IsInvalidSSL {
-		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-		log.Info("Ignore invalid self-signed certificates")
-	}
 
 	log.WithField("level", cfg.LogLevel).Info("Setting log level")
 	log.SetLevel(cfg.LogLevel)
