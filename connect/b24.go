@@ -194,7 +194,7 @@ func (b *b24) End(c *Call) {
 	if !ok || !isEntRegistred(e) {
 		return
 	}
-	defer delete(b.ent, c.CID)
+	defer delete(b.ent, c.LID)
 
 	uID, ok := b.eUID[c.Ext]
 	if !ok {
