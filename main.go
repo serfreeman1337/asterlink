@@ -45,7 +45,8 @@ type config struct {
 		LimDID  []string  `yaml:"dids"`
 		DID     map[string]bool
 	} `yaml:"pbx"`
-	B24 connect.B24Config `yaml:"bitrix24"`
+	B24      connect.B24Config      `yaml:"bitrix24"`
+	SuiteCRM connect.SuiteCRMConfig `yaml:"suitecrm"`
 }
 
 func (cfg *config) getConf() {
@@ -206,6 +207,9 @@ func main() {
 	if cfg.B24.URL != "" {
 		log.Info("Using Bitrix24 Connector")
 		connector = connect.NewB24Connector(&cfg.B24, originate)
+	} else if cfg.SuiteCRM.URL != "" {
+		log.Info("Using SuiteCRM Connector")
+		connector = connect.NewSuiteCRMConnector(&cfg.SuiteCRM, originate)
 	} else {
 		log.Warn("No connector selected")
 		connector = connect.NewDummyConnector()
