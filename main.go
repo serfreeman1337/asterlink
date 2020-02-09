@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/serfreeman1337/asterlink/connect"
+	"github.com/serfreeman1337/asterlink/connect/b24"
+	"github.com/serfreeman1337/asterlink/connect/suitecrm"
 
 	"gopkg.in/yaml.v2"
 
@@ -45,8 +47,8 @@ type config struct {
 		LimDID  []string  `yaml:"dids"`
 		DID     map[string]bool
 	} `yaml:"pbx"`
-	B24      connect.B24Config      `yaml:"bitrix24"`
-	SuiteCRM connect.SuiteCRMConfig `yaml:"suitecrm"`
+	B24      b24.Config      `yaml:"bitrix24"`
+	SuiteCRM suitecrm.Config `yaml:"suitecrm"`
 }
 
 func (cfg *config) getConf() {
@@ -206,10 +208,10 @@ func main() {
 
 	if cfg.B24.URL != "" {
 		log.Info("Using Bitrix24 Connector")
-		connector = connect.NewB24Connector(&cfg.B24, originate)
+		connector = b24.NewB24Connector(&cfg.B24, originate)
 	} else if cfg.SuiteCRM.URL != "" {
 		log.Info("Using SuiteCRM Connector")
-		connector = connect.NewSuiteCRMConnector(&cfg.SuiteCRM, originate)
+		connector = suitecrm.NewSuiteCRMConnector(&cfg.SuiteCRM, originate)
 	} else {
 		log.Warn("No connector selected")
 		connector = connect.NewDummyConnector()

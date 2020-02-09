@@ -1,4 +1,4 @@
-package connect
+package b24
 
 import (
 	"bytes"
@@ -14,11 +14,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/serfreeman1337/asterlink/connect"
 	log "github.com/sirupsen/logrus"
 )
 
-// B24Config struct
-type B24Config struct {
+// Config struct
+type Config struct {
 	IsInvalidSSL bool   `yaml:"ignore_invalid_ssl"`
 	Addr         string `yaml:"webhook_endpoint_addr"`
 	URL          string `yaml:"webhook_url"`
@@ -34,28 +35,28 @@ type B24Config struct {
 }
 
 type b24 struct {
-	cfg       *B24Config
+	cfg       *Config
 	eUID      map[string]int
-	ent       map[string]*b24Entity
-	originate OrigFunc
+	ent       map[string]*entity
+	originate connect.OrigFunc
 	log       *log.Entry
 	netClient *http.Client
 }
 
-type b24ContactInfo struct {
+type contactInfo struct {
 	Type     string `json:"CRM_ENTITY_TYPE"`
 	ID       int    `json:"CRM_ENTITY_ID"`
 	Assigned int    `json:"ASSIGNED_BY_ID"`
 }
 
-type b24Entity struct {
+type entity struct {
 	ID  string
 	cID string
 	log *log.Entry
 	mux sync.Mutex
 }
 
-func (e *b24Entity) isRegistred() bool {
+func (e *entity) isRegistred() bool {
 	if e.ID != "" {
 		return true
 	}
@@ -85,12 +86,12 @@ func (b *b24) Init() {
 	}
 }
 
-func (b *b24) OrigStart(c *Call, oID string) {
-	b.ent[c.LID] = &b24Entity{ID: oID, cID: c.CID, log: b.log.WithField("lid", c.LID)}
+func (b *b24) OrigStart(c *connect.Call, oID string) {
+	b.ent[c.LID] = &entity{ID: oID, cID: c.CID, log: b.log.WithField("lid", c.LID)}
 }
 
-func (b *b24) Start(c *Call) {
-	b.ent[c.LID] = &b24Entity{cID: c.CID, log: b.log.WithField("lid", c.LID)}
+func (b *b24) Start(c *connect.Call) {
+	b.ent[c.LID] = &entity{cID: c.CID, log: b.log.WithField("lid", c.LID)}
 	e := b.ent[c.LID]
 
 	e.mux.Lock()
@@ -111,7 +112,7 @@ func (b *b24) Start(c *Call) {
 	params.Phone = c.CID
 	params.DID = c.DID
 
-	if c.Dir == Out {
+	if c.Dir == connect.Out {
 		params.Type = 1
 	} else {
 		params.Type = 2
@@ -137,18 +138,18 @@ func (b *b24) Start(c *Call) {
 	e.mux.Unlock()
 }
 
-func (b *b24) Dial(c *Call, ext string) {
+func (b *b24) Dial(c *connect.Call, ext string) {
 	b.handleDial(c, ext, true)
 }
 
-func (b *b24) StopDial(c *Call, ext string) {
+func (b *b24) StopDial(c *connect.Call, ext string) {
 	b.handleDial(c, ext, false)
 }
 
-func (b *b24) Answer(c *Call, ext string) {
+func (b *b24) Answer(c *connect.Call, ext string) {
 }
 
-func (b *b24) End(c *Call) {
+func (b *b24) End(c *connect.Call) {
 	e, ok := b.ent[c.LID]
 	if !ok || !e.isRegistred() {
 		return
@@ -203,7 +204,7 @@ func (b *b24) End(c *Call) {
 	}
 }
 
-func (b *b24) handleDial(c *Call, ext string, isDial bool) {
+func (b *b24) handleDial(c *connect.Call, ext string, isDial bool) {
 	e, ok := b.ent[c.LID]
 	if !ok || !e.isRegistred() {
 		return
@@ -322,7 +323,7 @@ func (b *b24) apiAssignedHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%s", ext)
 }
 
-func (b *b24) findContact(phone string) (*b24ContactInfo, error) {
+func (b *b24) findContact(phone string) (*contactInfo, error) {
 	var num []string
 
 	if !b.cfg.HasFindForm {
@@ -342,7 +343,7 @@ func (b *b24) findContact(phone string) (*b24ContactInfo, error) {
 		cLog.Debug("Contact search")
 
 		var r struct {
-			Result []b24ContactInfo
+			Result []contactInfo
 		}
 		err := b.req("telephony.externalCall.searchCrmEntities", map[string]string{
 			"PHONE_NUMBER": p,
@@ -408,7 +409,7 @@ func (b *b24) req(method string, params interface{}, result interface{}) (err er
 }
 
 // NewB24Connector connector
-func NewB24Connector(cfg *B24Config, originate OrigFunc) Connecter {
+func NewB24Connector(cfg *Config, originate connect.OrigFunc) connect.Connecter {
 	client := http.Client{
 		Timeout: time.Second * 30,
 	}
@@ -426,7 +427,7 @@ func NewB24Connector(cfg *B24Config, originate OrigFunc) Connecter {
 		log:       log.WithField("b24", true),
 		originate: originate,
 		eUID:      make(map[string]int),
-		ent:       make(map[string]*b24Entity),
+		ent:       make(map[string]*entity),
 		netClient: &client,
 	}
 

@@ -1,4 +1,4 @@
-package connect
+package suitecrm
 
 import (
 	"bytes"
@@ -9,18 +9,19 @@ import (
 	"sync"
 	"time"
 
+	"github.com/serfreeman1337/asterlink/connect"
 	log "github.com/sirupsen/logrus"
 )
 
 const mysqlFormat = "2006-01-02 15:04:05"
 
-type suiteEntity struct {
+type entity struct {
 	ID  string
 	log *log.Entry
 	mux sync.Mutex
 }
 
-func (e *suiteEntity) isRegistred() bool {
+func (e *entity) isRegistred() bool {
 	if e.ID != "" {
 		return true
 	}
@@ -35,22 +36,22 @@ func (e *suiteEntity) isRegistred() bool {
 	return true
 }
 
-var suiteDirection = map[Direction]string{In: "Inbound", Out: "Outbound"}
+var dirDesc = map[connect.Direction]string{connect.In: "Inbound", connect.Out: "Outbound"}
 
-// SuiteCRMConfig struct
-type SuiteCRMConfig struct {
+// Config struct
+type Config struct {
 	URL          string
 	ClientID     string `yaml:"client_id"`
 	ClientSecret string `yaml:"client_secret"`
 }
 
 type suitecrm struct {
-	cfg       *SuiteCRMConfig
+	cfg       *Config
 	log       *log.Entry
 	token     string
 	tokenTime time.Time
 	mux       sync.Mutex
-	ent       map[string]*suiteEntity
+	ent       map[string]*entity
 	extUID    map[string]string
 }
 
@@ -58,8 +59,8 @@ func (s *suitecrm) Init() {
 	s.getUsers()
 }
 
-func (s *suitecrm) Start(c *Call) {
-	s.ent[c.LID] = &suiteEntity{log: s.log.WithField("lid", c.LID)}
+func (s *suitecrm) Start(c *connect.Call) {
+	s.ent[c.LID] = &entity{log: s.log.WithField("lid", c.LID)}
 	e := s.ent[c.LID]
 
 	e.mux.Lock()
@@ -70,7 +71,7 @@ func (s *suitecrm) Start(c *Call) {
 			"type": "Calls",
 			"attributes": map[string]interface{}{
 				"name":                     c.CID,
-				"direction":                suiteDirection[c.Dir],
+				"direction":                dirDesc[c.Dir],
 				"status":                   "Planned",
 				"duration_hours":           0,
 				"duration_minutes":         0,
@@ -113,16 +114,16 @@ func (s *suitecrm) Start(c *Call) {
 	}
 }
 
-func (s *suitecrm) OrigStart(c *Call, oID string) {
+func (s *suitecrm) OrigStart(c *connect.Call, oID string) {
 }
 
-func (s *suitecrm) Dial(c *Call, ext string) {
+func (s *suitecrm) Dial(c *connect.Call, ext string) {
 }
 
-func (s *suitecrm) StopDial(c *Call, ext string) {
+func (s *suitecrm) StopDial(c *connect.Call, ext string) {
 }
 
-func (s *suitecrm) Answer(c *Call, ext string) {
+func (s *suitecrm) Answer(c *connect.Call, ext string) {
 	uID, ok := s.extUID[c.Ext]
 	if !ok {
 		return
@@ -145,7 +146,7 @@ func (s *suitecrm) Answer(c *Call, ext string) {
 	s.rest("PATCH", "module", params, nil)
 }
 
-func (s *suitecrm) End(c *Call) {
+func (s *suitecrm) End(c *connect.Call) {
 	e, ok := s.ent[c.LID]
 	if !ok || !e.isRegistred() {
 		return
@@ -389,13 +390,13 @@ func (s *suitecrm) rest(method string, endpoint string, params interface{}, resu
 }
 
 // NewSuiteCRMConnector func
-func NewSuiteCRMConnector(cfg *SuiteCRMConfig, originate OrigFunc) Connecter {
+func NewSuiteCRMConnector(cfg *Config, originate connect.OrigFunc) connect.Connecter {
 	s := &suitecrm{
 		cfg: cfg,
 		log: log.WithField("suite", true),
 		// token:     "",
 		// tokenTime: time.Now().Add(1 * time.Hour),
-		ent:    make(map[string]*suiteEntity),
+		ent:    make(map[string]*entity),
 		extUID: make(map[string]string),
 	}
 	s.cfg.URL += "Api/"
