@@ -5,18 +5,70 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"time"
 
+	"github.com/serfreeman1337/asterlink/connect"
 	log "github.com/sirupsen/logrus"
 )
 
+func (s *suitecrm) createCallRecord(c *connect.Call) (id string, err error) {
+	attr := map[string]interface{}{
+		"name":                     c.CID,
+		"direction":                dirDesc[c.Dir],
+		"status":                   "Planned",
+		"duration_hours":           0,
+		"duration_minutes":         0,
+		"asterlink_call_seconds_c": 0,
+		"asterlink_cid_c":          c.CID,
+		"asterlink_uid_c":          c.LID,
+		"asterlink_did_c":          c.DID,
+		"date_start":               time.Now().UTC().Format(mysqlFormat),
+	}
+
+	if c.Ext != "" {
+		if uID, ok := s.extUID[c.Ext]; ok {
+			attr["assigned_user_id"] = uID
+		}
+	}
+
+	params := map[string]interface{}{
+		"data": map[string]interface{}{
+			"type":       "Calls",
+			"attributes": attr,
+		},
+	}
+	var r struct {
+		Data struct {
+			ID string
+		}
+	}
+
+	err = s.rest("POST", "module", params, &r)
+	// TODO: ERROR HANDLING!
+	if err != nil {
+		return
+	}
+
+	id = r.Data.ID
+
+	// find call contact
+	if contact, _, err := s.findContact(c.CID); err == nil {
+		// link call record with contact
+		params = map[string]interface{}{
+			"data": map[string]string{
+				"type": "Contacts",
+				"id":   contact,
+			},
+		}
+		err = s.rest("POST", "module/Calls/"+id+"/relationships", params, nil)
+	}
+	return
+}
+
 func (s *suitecrm) findContact(phone string) (id string, assigned string, err error) {
-	//
 	// search for contacts
-	//
 	cLog := s.log.WithField("phone", phone)
 	cLog.Debug("Contact search")
 
@@ -165,8 +217,8 @@ func (s *suitecrm) rest(method string, endpoint string, params interface{}, resu
 	defer res.Body.Close()
 
 	// TODO: remove debug!
-	body, err := ioutil.ReadAll(res.Body)
-	fmt.Println(string(body))
+	// body, err := ioutil.ReadAll(res.Body)
+	// fmt.Println(string(body))
 
 	if res.StatusCode != http.StatusOK && res.StatusCode != http.StatusCreated {
 		err = errors.New(res.Status)
@@ -175,8 +227,8 @@ func (s *suitecrm) rest(method string, endpoint string, params interface{}, resu
 	}
 
 	if result != nil {
-		err = json.Unmarshal(body, &result)
-		// err = json.NewDecoder(res.Body).Decode(&result)
+		// err = json.Unmarshal(body, &result)
+		err = json.NewDecoder(res.Body).Decode(&result)
 		if err != nil {
 			s.log.Error(err)
 			return

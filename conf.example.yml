@@ -39,3 +39,9 @@ bitrix24:
   # - {expr: "^\\+(\\d{5})(\\d{3})(\\d{2})(\\d{2})$", repl: "$2 $3 $4"}		# XXX XX XX
   # - {expr: "^\\+(\\d{5})(\\d{3})(\\d{2})(\\d{2})$", repl: "$2-$3-$4"}		# XXX-XX-XX
   # - {expr: "^\\+(\\d{5})(\\d{3})(\\d{2})(\\d{2})$", repl: "(+$1) $2-$3-$4"}	# (+XXXXX) XXX-XX-XX
+# suitecrm:
+#   url: http://localhost/suitecrm710/
+#   client_id: 1452c35c-38a6-056f-2374-5e30199ecfe0
+#   client_secret: test
+#   endpoint_addr: ":5678"
+#   endpoint_token: test
