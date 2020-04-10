@@ -25,16 +25,15 @@ func (s *suitecrm) assignedHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// search for contact
-	_, assigned, err := s.findContact(e.cID)
-	if err != nil {
+	// no contact found
+	if e.Contact.ID == "" {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	ext, ok := s.uIDtoExt(assigned)
+	ext, ok := s.uIDtoExt(e.Contact.AssignedID)
 	if !ok {
-		cLog.WithField("uid", assigned).Warn("Extension not found for user id")
+		cLog.WithField("uid", e.Contact.AssignedID).Warn("Extension not found for user id")
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -68,7 +67,7 @@ func (s *suitecrm) originateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// create new record for originated call
-	id, err := s.createCallRecord(&connect.Call{
+	id, _, err := s.createCallRecord(&connect.Call{
 		CID: r.FormValue("phone"),
 		Dir: connect.Out,
 		Ext: ext,
@@ -92,6 +91,7 @@ func (s *suitecrm) uIDtoExt(uID string) (string, bool) {
 	return "", false
 }
 
+// TODO: enable CORS
 func enableCors(w *http.ResponseWriter) {
 	(*w).Header().Set("Access-Control-Allow-Origin", "*")
 }

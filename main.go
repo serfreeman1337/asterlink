@@ -187,7 +187,7 @@ func main() {
 			"Exten":    num,
 			"Context":  cfg.DP.Dial,
 			"Priority": "1",
-			"Variable": "SF_CONNECTOR=" + oID, // variable to track originated call
+			"Variable": "SF_CONNECTOR=" + oID + "|" + dest, // keep track of call record and original caller id
 			"CallerID": ext,
 			"Async":    "true",
 			"Codecs":   "alaw,ulaw", // TODO: config?
@@ -434,11 +434,14 @@ func main() {
 			useRec(c, e["Uniqueid"])
 
 			if !c.O {
-				go connector.Start(c)
-				go connector.Dial(c, rext[1])
+				go func() {
+					connector.Start(c)
+					connector.Dial(c, rext[1])
+					connector.Answer(c, rext[1])
+				}()
+			} else {
+				go connector.Answer(c, rext[1])
 			}
-
-			go connector.Answer(c, rext[1])
 
 			break
 		}
@@ -537,17 +540,22 @@ func main() {
 				return
 			}
 
+			// split tracker variable (see Originate request)
+			r := strings.Split(e["Value"], "|")
+
 			cdr[e["Linkedid"]] = &connect.Call{
 				LID:      e["Linkedid"],
+				CID:      r[1],
 				TimeCall: time.Now(),
+				TimeDial: time.Now(),
 				Dir:      connect.Out,
 				Ch:       e["Channel"],
 				O:        true,
 				Log:      log.WithField("lid", e["Linkedid"]),
 			}
 
-			log.WithField("oid", e["Value"]).Debug("New originated call")
-			connector.OrigStart(cdr[e["Linkedid"]], e["Value"])
+			log.WithField("oid", r[0]).Debug("New originated call")
+			connector.OrigStart(cdr[e["Linkedid"]], r[0])
 
 			return
 		}

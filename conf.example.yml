@@ -28,7 +28,7 @@ bitrix24:
   default_user: "1"
   webhook_url: https://mycrm.bitrix24.eu/rest/1/mytoken/
   webhook_originate_token: my_originate_token
-  webhook_endpoint_addr: "127.0.0.1:5678"
+  webhook_endpoint_addr: "0.0.0.0:5678"
   # rec_upload: "http://mypbx.example.org/recfiles/"
   # search_format:
   # - {expr: ".*", repl: "$0"}
@@ -40,8 +40,8 @@ bitrix24:
   # - {expr: "^\\+(\\d{5})(\\d{3})(\\d{2})(\\d{2})$", repl: "$2-$3-$4"}		# XXX-XX-XX
   # - {expr: "^\\+(\\d{5})(\\d{3})(\\d{2})(\\d{2})$", repl: "(+$1) $2-$3-$4"}	# (+XXXXX) XXX-XX-XX
 # suitecrm:
-#   url: http://localhost/suitecrm710/
-#   client_id: 1452c35c-38a6-056f-2374-5e30199ecfe0
-#   client_secret: test
-#   endpoint_addr: ":5678"
-#   endpoint_token: test
+#   url: http://my.suitecrm/instance/
+#   client_id: my_client_id
+#   client_secret: my_client_secret
+#   endpoint_token: my_endpoint_token
+#   endpoint_addr: "0.0.0.0:5678"

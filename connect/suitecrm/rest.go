@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/url"
 	"time"
@@ -13,7 +12,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (s *suitecrm) createCallRecord(c *connect.Call) (id string, err error) {
+type contact struct {
+	ID         string `json:"id,omitempty"`
+	Name       string `json:"name,omitempty"`
+	AssignedID string `json:"assigned,omitempty"`
+}
+
+func (s *suitecrm) createCallRecord(c *connect.Call) (id string, cont contact, err error) {
 	attr := map[string]interface{}{
 		"name":                     c.CID,
 		"direction":                dirDesc[c.Dir],
@@ -53,13 +58,14 @@ func (s *suitecrm) createCallRecord(c *connect.Call) (id string, err error) {
 
 	id = r.Data.ID
 
-	// find call contact
-	if contact, _, err := s.findContact(c.CID); err == nil {
+	// call contact
+	cont, _ = s.findContact(c.CID) // don't care about error ?
+	if cont.ID != "" {
 		// link call record with contact
 		params = map[string]interface{}{
 			"data": map[string]string{
 				"type": "Contacts",
-				"id":   contact,
+				"id":   cont.ID,
 			},
 		}
 		err = s.rest("POST", "module/Calls/"+id+"/relationships", params, nil)
@@ -67,13 +73,16 @@ func (s *suitecrm) createCallRecord(c *connect.Call) (id string, err error) {
 	return
 }
 
-func (s *suitecrm) findContact(phone string) (id string, assigned string, err error) {
+func (s *suitecrm) findContact(phone string) (cont contact, err error) {
 	// search for contacts
 	cLog := s.log.WithField("phone", phone)
 	cLog.Debug("Contact search")
 
 	params := url.Values{}
-	params.Add("fields[Contacts]", "id,assigned_user_id")
+	// TODO:  provide PR to suitecrm ?
+	// params.Add("fields[Contacts]", "id,full_name,assigned_user_id") // full_name isn't working with fields filter
+
+	// See issue #8366 -> https://github.com/salesagility/SuiteCRM/issues/8366
 	params.Add("filter[operator]", "or")
 	params.Add("filter[phone_mobile][eq]", phone)
 	params.Add("filter[phone_work][eq]", phone)
@@ -83,6 +92,7 @@ func (s *suitecrm) findContact(phone string) (id string, assigned string, err er
 			ID         string
 			Attributes struct {
 				AssignedID string `json:"assigned_user_id"`
+				FullName   string `json:"full_name"`
 			}
 		}
 	}
@@ -93,14 +103,15 @@ func (s *suitecrm) findContact(phone string) (id string, assigned string, err er
 
 	if len(r.Data) == 0 {
 		cLog.Debug("Not found")
-		err = errors.New("Contact not found")
 
 		return
 	}
 
 	cLog.WithField("contact", r.Data[0].ID).Debug("Found")
-	id = r.Data[0].ID
-	assigned = r.Data[0].Attributes.AssignedID
+
+	cont.ID = r.Data[0].ID
+	cont.AssignedID = r.Data[0].Attributes.AssignedID
+	cont.Name = r.Data[0].Attributes.FullName
 
 	return
 }
@@ -108,6 +119,9 @@ func (s *suitecrm) findContact(phone string) (id string, assigned string, err er
 func (s *suitecrm) getUsers() (err error) {
 	params := url.Values{}
 	params.Add("fields[Users]", "id,asterlink_ext_c")
+
+	// TODO:  provide PR to suitecrm ?
+	// you can't apply != "" filter as for 7.10.22 version
 	// params.Add("filter[operator]", "and")
 	// params.Add("filter[asterlink_ext_c][neq]", "")
 
@@ -263,7 +277,7 @@ func (s *suitecrm) refreshToken() (err error) {
 
 	s.mux.Unlock()
 
-	fmt.Println(s.token)
+	// fmt.Println(s.token)
 	s.log.Debug("Token has been updated")
 	return
 }

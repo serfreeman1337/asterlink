@@ -9,7 +9,14 @@ import (
 const mysqlFormat = "2006-01-02 15:04:05"
 
 func (s *suitecrm) Start(c *connect.Call) {
-	s.ent[c.LID] = &entity{cID: c.CID, log: s.log.WithField("lid", c.LID)}
+	s.ent[c.LID] = &entity{
+		Dir: c.Dir,
+		DID: c.DID,
+		CID: c.CID,
+
+		log: s.log.WithField("lid", c.LID),
+	}
+
 	e := s.ent[c.LID]
 
 	e.mux.Lock()
@@ -17,7 +24,8 @@ func (s *suitecrm) Start(c *connect.Call) {
 
 	var err error
 
-	e.ID, err = s.createCallRecord(c)
+	e.ID, e.Contact, err = s.createCallRecord(c)
+
 	if err != nil {
 		delete(s.ent, c.LID)
 		return
@@ -27,16 +35,35 @@ func (s *suitecrm) Start(c *connect.Call) {
 }
 
 func (s *suitecrm) OrigStart(c *connect.Call, oID string) {
-	s.ent[c.LID] = &entity{ID: oID, log: s.log.WithField("lid", c.LID)}
+	e := &entity{
+		ID:  oID,
+		Dir: c.Dir,
+		CID: c.CID,
+
+		log: s.log.WithField("lid", c.LID),
+	}
+	s.ent[c.LID] = e
+
+	// TODO: rewrite
+	e.mux.Lock()
+
+	cont, _ := s.findContact(c.CID)
+	e.Contact = cont
+
+	e.mux.Unlock()
 }
 
 func (s *suitecrm) Dial(c *connect.Call, ext string) {
-	if c.O { // update uid for originated call
-		e, ok := s.ent[c.LID]
-		if !ok || !e.isRegistred() {
-			return
-		}
+	e, ok := s.ent[c.LID]
+	if !ok || !e.isRegistred() {
+		return
+	}
 
+	e.exts.Store(ext, true)
+	e.TimeStamp = c.TimeDial
+	s.wsBroadcast(ext, true, e)
+
+	if c.O { // update uid for originated call
 		params := map[string]interface{}{
 			"data": map[string]interface{}{
 				"type": "Calls",
@@ -46,26 +73,43 @@ func (s *suitecrm) Dial(c *connect.Call, ext string) {
 				},
 			},
 		}
+
+		e.mux.Lock()
 		s.rest("PATCH", "module", params, nil)
+		e.mux.Unlock()
 	}
 }
 
 func (s *suitecrm) StopDial(c *connect.Call, ext string) {
-}
-
-func (s *suitecrm) Answer(c *connect.Call, ext string) {
-	// update user id for incoming call on answer
-	// or set DID for originated call
-	if c.Dir != connect.In && !c.O {
+	e, ok := s.ent[c.LID]
+	if !ok || !e.isRegistred() {
 		return
 	}
 
+	e.exts.Delete(ext)
+	s.wsBroadcast(ext, false, e)
+}
+
+func (s *suitecrm) Answer(c *connect.Call, ext string) {
 	uID, ok := s.extUID[c.Ext]
 	if !ok {
 		return
 	}
+
 	e, ok := s.ent[c.LID]
 	if !ok || !e.isRegistred() {
+
+		return
+	}
+
+	e.TimeStamp = c.TimeAnswer
+	e.IsAnswered = true
+	e.DID = c.DID
+	s.wsBroadcast(ext, true, e)
+
+	// update user id for incoming call on answer
+	// or set DID for originated call
+	if c.Dir != connect.In && !c.O {
 		return
 	}
 
@@ -85,7 +129,10 @@ func (s *suitecrm) Answer(c *connect.Call, ext string) {
 			"attributes": attr,
 		},
 	}
+
+	e.mux.Lock()
 	s.rest("PATCH", "module", params, nil)
+	e.mux.Unlock()
 }
 
 func (s *suitecrm) End(c *connect.Call) {
@@ -94,6 +141,14 @@ func (s *suitecrm) End(c *connect.Call) {
 		return
 	}
 	defer delete(s.ent, c.LID)
+
+	e.exts.Range(func(key interface{}, value interface{}) bool {
+		e.exts.Delete(key)
+
+		s.wsBroadcast(key.(string), false, e)
+
+		return true
+	})
 
 	var (
 		d      time.Duration
@@ -130,5 +185,7 @@ func (s *suitecrm) End(c *connect.Call) {
 		},
 	}
 
+	e.mux.Lock()
 	s.rest("PATCH", "module", params, nil)
+	e.mux.Unlock()
 }

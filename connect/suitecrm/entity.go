@@ -2,13 +2,24 @@ package suitecrm
 
 import (
 	"sync"
+	"time"
 
+	"github.com/serfreeman1337/asterlink/connect"
 	log "github.com/sirupsen/logrus"
 )
 
 type entity struct {
-	ID  string
-	cID string
+	ID string `json:"id"`
+
+	Dir        connect.Direction `json:"dir"`
+	DID        string            `json:"did"`
+	CID        string            `json:"cid"`
+	IsAnswered bool              `json:"answered"`
+	TimeStamp  time.Time         `json:"time"`
+	Contact    contact           `json:"contact,omitempty"`
+
+	exts sync.Map
+
 	log *log.Entry
 	mux sync.Mutex
 }

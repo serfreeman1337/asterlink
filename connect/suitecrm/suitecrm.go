@@ -5,8 +5,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/serfreeman1337/asterlink/connect"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/serfreeman1337/asterlink/connect"
 )
 
 var dirDesc = map[connect.Direction]string{connect.In: "Inbound", connect.Out: "Outbound"}
@@ -28,6 +29,7 @@ type suitecrm struct {
 	mux       sync.Mutex
 	ent       map[string]*entity
 	extUID    map[string]string
+	wsRoom    map[string]map[*wsClient]bool
 	originate connect.OrigFunc
 }
 
@@ -37,6 +39,10 @@ func (s *suitecrm) Init() {
 	if s.cfg.EndpointAddr != "" {
 		http.HandleFunc("/assigned/", s.assignedHandler)
 		http.HandleFunc("/originate/", s.originateHandler)
+
+		s.wsRoom = make(map[string]map[*wsClient]bool)
+		http.HandleFunc("/ws/", s.wsHandler)
+
 		go func() {
 			s.log.WithField("addr", s.cfg.EndpointAddr).Info("Enabling web server")
 			err := http.ListenAndServe(s.cfg.EndpointAddr, nil)
