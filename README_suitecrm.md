@@ -1,4 +1,4 @@
-# Asterlink SuiteCRM Integration
+# AsterLink SuiteCRM Integration
 Features:
 * Calls logging.
 * Dialing for "tel" fields.
@@ -33,9 +33,9 @@ Log calls for "Calls" module.
 * Configure token ID and Secret in **config.yml**
 * Do a test run. You should see userids from suitecrm in console.
 
-## Click2Dial and Pop u card
+## Click2Dial and Pop up card
 * Configure **endpoint_addr** and **endpoint_token** in **config.yml**.
-* Copy **asterlink** folder to ***suitecrm*** directory.
+* Copy [connect/suitecrm/dist/asterlink](https://github.com/serfreeman1337/asterlink/tree/master/connect/suitecrm/dist) folder to ***suitecrm*** directory.
 * Add following line to the end of the **custom/modules/logic_hooks.php** file:
   ```php
   $hook_array['after_ui_frame'][] = Array(1, 'asterlink javascript', 'asterlink/hooks.php', 'AsterLink', 'init_javascript');
