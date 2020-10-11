@@ -288,6 +288,12 @@ func main() {
 			}
 		}
 
+		// skip anonymous calls ?
+		if e["CallerIDNum"] == "<unknown>" {
+			log.WithFields(log.Fields{"lid": e["Linkedid"]}).Warn("Anonymous CallerID")
+			return
+		}
+
 		cID, ok := formatNum(e["CallerIDNum"], true)
 		if !ok {
 			log.WithFields(log.Fields{"lid": e["Linkedid"], "cid": e["CallerIDNum"]}).Warn("Unknown incoming CallerID")
@@ -319,9 +325,9 @@ func main() {
 				return
 			}
 
-			cID, ok := formatNum(e["ConnectedLineNum"], true)
+			cID, ok := formatNum(e["DestCallerIDNum"], true)
 			if !ok {
-				log.WithFields(log.Fields{"lid": e["Linkedid"], "cid": e["ConnectedLineNum"]}).Warn("Unknown outgoing CallerID")
+				log.WithFields(log.Fields{"lid": e["Linkedid"], "cid": e["DestCallerIDNum"]}).Warn("Unknown outgoing CallerID")
 				return
 			}
 
