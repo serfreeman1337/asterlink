@@ -72,7 +72,7 @@ func (b *b24) StopDial(c *connect.Call, ext string) {
 func (b *b24) Answer(c *connect.Call, ext string) {
 }
 
-func (b *b24) End(c *connect.Call) {
+func (b *b24) End(c *connect.Call, cause string) {
 	e, ok := b.ent[c.LID]
 	if !ok || !e.isRegistred() {
 		return
@@ -100,7 +100,19 @@ func (b *b24) End(c *connect.Call) {
 		params.Status = "200"
 	} else {
 		params.Dur = int(time.Since(c.TimeCall).Seconds())
-		params.Status = "304"
+
+		if cause == "16" {
+			if c.Dir == connect.In {
+				params.Status = "304" // This call was skipped
+			} else {
+				params.Status = "603-S" // The call was skipped
+			}
+		} else {
+			params.Status, ok = b.causeCode[cause]
+			if !ok {
+				params.Status = "505" // Undefined
+			}
+		}
 	}
 
 	if c.Vote != "" && c.Vote != "-" {

@@ -331,8 +331,13 @@ func main() {
 				return
 			}
 
+			rext := rechan.FindStringSubmatch(e["Channel"])
+			if len(rext) == 0 {
+				return
+			}
+
 			// register outbound call
-			cdr[e["Linkedid"]] = &connect.Call{
+			c = &connect.Call{
 				LID:      e["Linkedid"],
 				Dir:      connect.Out,
 				CID:      cID,
@@ -342,9 +347,15 @@ func main() {
 				Ch:       e["Channel"],
 				ChDest:   e["DestChannel"],
 				Log:      log.WithField("lid", e["Linkedid"]),
+				Ext:      rext[1],
 			}
+			cdr[e["Linkedid"]] = c
 
-			cdr[e["Linkedid"]].Log.Debug("New outgoing call")
+			c.Log.Debug("New outgoing call")
+
+			go connector.Start(c)
+			go connector.Dial(c, rext[1])
+			go connector.Answer(c, rext[1])
 
 			return
 		} else if c.O { // Originated call
@@ -440,11 +451,11 @@ func main() {
 			useRec(c, e["Uniqueid"])
 
 			if !c.O {
-				go func() {
-					connector.Start(c)
-					connector.Dial(c, rext[1])
-					connector.Answer(c, rext[1])
-				}()
+				// go func() {
+				// 	connector.Start(c)
+				// 	connector.Dial(c, rext[1])
+				// 	connector.Answer(c, rext[1])
+				// }()
 			} else {
 				go connector.Answer(c, rext[1])
 			}
@@ -526,7 +537,7 @@ func main() {
 			}
 
 			c.Log.Debug("Call finished")
-			go connector.End(c)
+			go connector.End(c, e["Cause"])
 
 			delete(cdr, e["Linkedid"])
 		} else {

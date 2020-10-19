@@ -33,6 +33,7 @@ type b24 struct {
 	originate connect.OrigFunc
 	log       *log.Entry
 	netClient *http.Client
+	causeCode map[string]string
 }
 
 func (b *b24) Init() {
@@ -72,6 +73,19 @@ func NewB24Connector(cfg *Config, originate connect.OrigFunc) connect.Connecter 
 		eUID:      make(map[string]int),
 		ent:       make(map[string]*entity),
 		netClient: &client,
+		causeCode: map[string]string{ // https://wiki.asterisk.org/wiki/display/AST/Hangup+Cause+Mappings
+			"0":  "603-S",
+			"1":  "404",
+			"3":  "484",
+			"16": "200",
+			"17": "486",
+			"18": "480",
+			"19": "480",
+			"21": "603",
+			"28": "484",
+			"34": "503",
+			"42": "503",
+		},
 	}
 
 	return b

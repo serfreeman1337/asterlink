@@ -135,7 +135,7 @@ func (s *suitecrm) Answer(c *connect.Call, ext string) {
 	e.mux.Unlock()
 }
 
-func (s *suitecrm) End(c *connect.Call) {
+func (s *suitecrm) End(c *connect.Call, cause string) {
 	e, ok := s.ent[c.LID]
 	if !ok || !e.isRegistred() {
 		return

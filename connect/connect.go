@@ -44,5 +44,5 @@ type Connecter interface {
 	Dial(call *Call, ext string)
 	StopDial(call *Call, ext string)
 	Answer(call *Call, ext string)
-	End(call *Call)
+	End(call *Call, cause string)
 }

@@ -21,7 +21,7 @@ func (con *du) StopDial(c *Call, ext string) {
 func (con *du) Answer(c *Call, ext string) {
 }
 
-func (con *du) End(c *Call) {
+func (con *du) End(c *Call, cause string) {
 }
 
 // NewDummyConnector func
