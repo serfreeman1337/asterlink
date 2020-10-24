@@ -34,8 +34,8 @@ function alShowCard(d) {
 
 	if (!c.length) { // create new card
 		c = $('<div />', {
-			style: 'display: none; width: 330px; position: fixed;top: 80px;right: 30px;z-index: 9999;background-color: #534d64;border-radius: 5px;color: #f5f5f5;padding: 5px; font-size:16px;',
-			class: 'alCard',
+			style: 'display: none; width: 330px; position: fixed;top: 80px;right: 30px;z-index: 9999;border-radius: 5px;padding: 5px; font-size:16px;',
+			class: 'alCard bg-primary',
 			html: '\
 <div style="margin-bottom: 5px;">\
     <img src="themes/SuiteP/images/sidebar/modules/Calls.svg"> <span class="alDid">'+ (d.did ? d.did : '-') + '</span>\
@@ -43,8 +43,8 @@ function alShowCard(d) {
         </div>\
 	</div>\
     <div style="margin-bottom: 5px;">\
-        <span style="color: #f08377;"><a href="#" class="alCall">'+ alDirDesc[d.dir][0] + '</a></span>\
-        <span style="color: #e56455; float: right;" class="alDuration"></span>\
+        <a href="#" class="alCall">'+ alDirDesc[d.dir][0] + '</a>\
+        <span style="float: right;" class="alDuration"></span>\
 </div>', // TODO: make it customisable
 			'data-id': d.id
 		});
