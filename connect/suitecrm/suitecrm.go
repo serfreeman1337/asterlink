@@ -19,6 +19,15 @@ type Config struct {
 	ClientSecret  string `yaml:"client_secret"`
 	EndpointAddr  string `yaml:"endpoint_addr"`
 	EndpointToken string `yaml:"endpoint_token"`
+	Relationships []struct {
+		Module        string   `yaml:"module"`
+		ModuleName    string   `yaml:"module_name"`
+		PrimaryModule bool     `yaml:"primary_module"`
+		ShowCreate    bool     `yaml:"show_create"`
+		NameField     string   `yaml:"name_field"`
+		PhoneFields   []string `yaml:"phone_fields"`
+	} `yaml:"relationships"`
+	RelateOnce bool
 }
 
 type suitecrm struct {

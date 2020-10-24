@@ -24,7 +24,7 @@ func (s *suitecrm) Start(c *connect.Call) {
 
 	var err error
 
-	e.ID, e.Contact, err = s.createCallRecord(c)
+	e.ID, e.Relationships, err = s.createCallRecord(c)
 
 	if err != nil {
 		delete(s.ent, c.LID)
@@ -47,8 +47,9 @@ func (s *suitecrm) OrigStart(c *connect.Call, oID string) {
 	// TODO: rewrite
 	e.mux.Lock()
 
-	cont, _ := s.findContact(c.CID)
-	e.Contact = cont
+	for rel := range s.findRelation(c.CID) {
+		e.Relationships = append(e.Relationships, rel)
+	}
 
 	e.mux.Unlock()
 }

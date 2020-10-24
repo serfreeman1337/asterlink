@@ -11,14 +11,13 @@ import (
 type entity struct {
 	ID string `json:"id"`
 
-	Dir        connect.Direction `json:"dir"`
-	DID        string            `json:"did"`
-	CID        string            `json:"cid"`
-	IsAnswered bool              `json:"answered"`
-	TimeStamp  time.Time         `json:"time"`
-	Contact    contact           `json:"contact,omitempty"`
-
-	exts sync.Map
+	Dir           connect.Direction `json:"dir"`
+	DID           string            `json:"did"`
+	CID           string            `json:"cid"`
+	IsAnswered    bool              `json:"answered"`
+	TimeStamp     time.Time         `json:"time"`
+	Relationships []relation        `json:"related"`
+	exts          sync.Map
 
 	log *log.Entry
 	mux sync.Mutex

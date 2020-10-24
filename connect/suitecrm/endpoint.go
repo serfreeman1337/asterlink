@@ -25,15 +25,15 @@ func (s *suitecrm) assignedHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// no contact found
-	if e.Contact.ID == "" {
+	// no relation found
+	if len(e.Relationships) == 0 || e.Relationships[0].ID == "" {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	ext, ok := s.uIDtoExt(e.Contact.AssignedID)
+	ext, ok := s.uIDtoExt(e.Relationships[0].AssignedID)
 	if !ok {
-		cLog.WithField("uid", e.Contact.AssignedID).Warn("Extension not found for user id")
+		cLog.WithField("uid", e.Relationships[0].AssignedID).Warn("Extension not found for user id")
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}

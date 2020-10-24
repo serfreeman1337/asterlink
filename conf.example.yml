@@ -25,7 +25,7 @@ dialplan:
 #   dial_format:
 #   - {expr: "^(\\+|)998(\\d{9})$", repl: "$2"}
 bitrix24:
-  default_user: "1"
+  default_user: 1
   webhook_url: https://mycrm.bitrix24.eu/rest/1/mytoken/
   webhook_originate_token: my_originate_token
   webhook_endpoint_addr: "0.0.0.0:5678"
@@ -45,3 +45,19 @@ bitrix24:
 #   client_secret: my_client_secret
 #   endpoint_token: my_endpoint_token
 #   endpoint_addr: "0.0.0.0:5678"
+#   relationships:
+#   -
+#     module: Contacts
+#     module_name: Contact
+#     primary_module: false
+#     show_create: true
+#     name_field: full_name
+#     phone_fields: [phone_mobile, phone_work]
+#   # -
+#   #   module: Prospects
+#   #   module_name: Target
+#   #   primary_module: true
+#   #   show_create: false
+#   #   name_field: full_name
+#   #   phone_fields: [phone_mobile, phone_work]
+#   relate_once: false

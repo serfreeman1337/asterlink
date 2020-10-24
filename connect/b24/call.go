@@ -105,7 +105,7 @@ func (b *b24) End(c *connect.Call, cause string) {
 			if c.Dir == connect.In {
 				params.Status = "304" // This call was skipped
 			} else {
-				params.Status = "603-S" // The call was skipped
+				params.Status = "603-S" // This call was canceled
 			}
 		} else {
 			params.Status, ok = b.causeCode[cause]

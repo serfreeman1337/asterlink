@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/serfreeman1337/asterlink/connect"
@@ -18,7 +19,16 @@ type contact struct {
 	AssignedID string `json:"assigned,omitempty"`
 }
 
-func (s *suitecrm) createCallRecord(c *connect.Call) (id string, cont contact, err error) {
+type relation struct {
+	Module        string `json:"module"`
+	ModuleName    string `json:"module_name"`
+	PrimaryModule bool   `json:"-"`
+	ID            string `json:"id,omitempty"`
+	Name          string `json:"name,omitempty"`
+	AssignedID    string `json:"-"`
+}
+
+func (s *suitecrm) createCallRecord(c *connect.Call) (id string, relations []relation, err error) {
 	attr := map[string]interface{}{
 		"name":                     c.CID,
 		"direction":                dirDesc[c.Dir],
@@ -58,62 +68,99 @@ func (s *suitecrm) createCallRecord(c *connect.Call) (id string, cont contact, e
 
 	id = r.Data.ID
 
-	// call contact
-	cont, _ = s.findContact(c.CID) // don't care about error ?
-	if cont.ID != "" {
-		// link call record with contact
-		params = map[string]interface{}{
-			"data": map[string]string{
-				"type": "Contacts",
-				"id":   cont.ID,
-			},
+	// call relation
+	for rel := range s.findRelation(c.CID) {
+		relations = append(relations, rel)
+		// link call record with related record
+		var params map[string]interface{}
+		var url string
+
+		if rel.PrimaryModule {
+			params = map[string]interface{}{
+				"data": map[string]string{
+					"type": "Calls",
+					"id":   id,
+				},
+			}
+
+			url = "module/" + rel.Module + "/" + rel.ID + "/relationships"
+		} else {
+			params = map[string]interface{}{
+				"data": map[string]string{
+					"type": rel.Module,
+					"id":   rel.ID,
+				},
+			}
+
+			url = "module/Calls/" + id + "/relationships"
 		}
-		err = s.rest("POST", "module/Calls/"+id+"/relationships", params, nil)
+
+		// don't care about errors
+		s.rest("POST", url, params, nil)
 	}
+
 	return
 }
 
-func (s *suitecrm) findContact(phone string) (cont contact, err error) {
+func (s *suitecrm) findRelation(phone string) <-chan relation {
+	out := make(chan relation)
+
 	// search for contacts
 	cLog := s.log.WithField("phone", phone)
-	cLog.Debug("Contact search")
+	cLog.Debug("Relation search")
 
-	params := url.Values{}
-	// TODO:  provide PR to suitecrm ?
-	// params.Add("fields[Contacts]", "id,full_name,assigned_user_id") // full_name isn't working with fields filter
+	go func() {
+		for _, rs := range s.cfg.Relationships {
+			params := url.Values{}
+			// TODO:  provide PR to suitecrm ?
+			// params.Add("fields[Contacts]", "id,full_name,assigned_user_id") // full_name isn't working with fields filter
 
-	// See issue #8366 -> https://github.com/salesagility/SuiteCRM/issues/8366
-	params.Add("filter[operator]", "or")
-	params.Add("filter[phone_mobile][eq]", phone)
-	params.Add("filter[phone_work][eq]", phone)
+			// See issue #8366 -> https://github.com/salesagility/SuiteCRM/issues/8366
+			params.Add("filter[operator]", "or")
+			for _, field := range rs.PhoneFields {
+				params.Add("filter["+field+"][eq]", phone)
+			}
 
-	var r struct {
-		Data []struct {
-			ID         string
-			Attributes struct {
-				AssignedID string `json:"assigned_user_id"`
-				FullName   string `json:"full_name"`
+			var r struct {
+				Data []struct {
+					ID         string
+					Attributes map[string]json.RawMessage
+				}
+			}
+			err := s.rest("GET", "module/"+rs.Module+"?"+params.Encode(), nil, &r)
+			if err != nil {
+				continue
+			}
+
+			if len(r.Data) == 0 {
+				continue
+			}
+
+			if _, ok := r.Data[0].Attributes[rs.NameField]; !ok {
+				cLog.WithFields(log.Fields{"module": rs.Module, "name_field": rs.NameField}).Warn("Unknown name field")
+				continue
+			}
+
+			assignedID := ""
+			if aid, ok := r.Data[0].Attributes["assigned_user_id"]; ok {
+				assignedID = strings.Trim(string(aid), "\"")
+			}
+
+			out <- relation{rs.Module, rs.ModuleName, rs.PrimaryModule,
+				r.Data[0].ID,
+				strings.Trim(string(r.Data[0].Attributes[rs.NameField]), "\""),
+				assignedID,
+			}
+
+			if s.cfg.RelateOnce {
+				break
 			}
 		}
-	}
-	err = s.rest("GET", "module/Contacts?"+params.Encode(), nil, &r)
-	if err != nil {
-		return
-	}
 
-	if len(r.Data) == 0 {
-		cLog.Debug("Not found")
+		close(out)
+	}()
 
-		return
-	}
-
-	cLog.WithField("contact", r.Data[0].ID).Debug("Found")
-
-	cont.ID = r.Data[0].ID
-	cont.AssignedID = r.Data[0].Attributes.AssignedID
-	cont.Name = r.Data[0].Attributes.FullName
-
-	return
+	return out
 }
 
 func (s *suitecrm) getUsers() (err error) {

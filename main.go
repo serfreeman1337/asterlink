@@ -353,9 +353,11 @@ func main() {
 
 			c.Log.Debug("New outgoing call")
 
-			go connector.Start(c)
-			go connector.Dial(c, rext[1])
-			go connector.Answer(c, rext[1])
+			go func() {
+				connector.Start(c)
+				connector.Dial(c, rext[1])
+				connector.Answer(c, rext[1])
+			}()
 
 			return
 		} else if c.O { // Originated call
