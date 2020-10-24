@@ -356,7 +356,6 @@ func main() {
 			go func() {
 				connector.Start(c)
 				connector.Dial(c, rext[1])
-				connector.Answer(c, rext[1])
 			}()
 
 			return
@@ -452,15 +451,7 @@ func main() {
 			c.Log.WithField("ext", c.Ext).Debug("Dial 2")
 			useRec(c, e["Uniqueid"])
 
-			if !c.O {
-				// go func() {
-				// 	connector.Start(c)
-				// 	connector.Dial(c, rext[1])
-				// 	connector.Answer(c, rext[1])
-				// }()
-			} else {
-				go connector.Answer(c, rext[1])
-			}
+			go connector.Answer(c, rext[1])
 
 			break
 		}
