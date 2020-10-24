@@ -3,7 +3,7 @@ if (!defined('sugarEntry') || !sugarEntry) die('Not A Valid Entry Point');
 
 class AsterLink {
     function init_javascript($event, $arguments) {
-        if (!empty($_REQUEST['to_pdf'])) {
+    	if (!empty($_REQUEST['to_pdf']) || (!empty($_GET['module']) && $_GET['module'] == 'Emails')) {
             return;
         }
 
