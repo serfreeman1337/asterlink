@@ -26,7 +26,8 @@ dialplan:
   - DCS-Incoming
   dial_context: Long-Distance
 ```
-You see `DCS-Incoming` in `ext_context` because we are dialing **queue** extensions directly from incoming context. (queue memeber config `member => PJSIP/1101` and not `member => Local/1101@Dial-Users` like in freepbx).
+You see `DCS-Incoming` in `ext_context` because we are dialing **queue** extensions directly from incoming context.  
+(queue memeber config `member => PJSIP/1101` and not `member => Local/1101@Dial-Users` like in freepbx).
 
 ## CallerID Format
 Connector can format CallerID using regexp. This useful when your VoIP provider doesn't send desired format. 
@@ -66,6 +67,8 @@ Install asterlink under **/opt/asterlink** folder.
   mv conf.example.yml conf.yml
   nano conf.yml
   ```
+  Note: config file is using YAML format and <ins>it requires to have proper indentation</ins>.  
+  Use online yaml validator to check your file for errors.
 * Test run
   ```bash
   ./asterlink

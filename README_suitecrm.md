@@ -8,11 +8,8 @@ Features:
 ## Basic setup
 First of all, you need to setup V8 API in SuiteCRM. Follow [this](https://docs.suitecrm.com/developer/api/developer-setup-guide/json-api/#_before_you_start_calling_endpoints) guide (The "Before you start calling endpoints" part).
 
-You may get **404 API error**, if you are using SuiteCRM with **php-fcgi**. See this:
-https://github.com/salesagility/SuiteCRM/pull/8486
-
-There also may be problems with contact search. See this:
-https://github.com/salesagility/SuiteCRM/pull/8492
+* There might be problems with contact search. See pull request [#8492](https://github.com/salesagility/SuiteCRM/pull/8492) for solution.
+* You might get **404 API error**, if you are using SuiteCRM with **php-fcgi**. See pull request [#8486](https://github.com/salesagility/SuiteCRM/pull/8486) for solution.
 
 Log calls for "Calls" module.
 
@@ -31,22 +28,52 @@ Log calls for "Calls" module.
     | Data Type | Field Name             | Display Label       | Max Size |
     |-----------|------------------------|---------------------|----------|
     | TextField | asterlink_ext          | Asterisk Extension  | 64       |
-* Optional: display seconds for call duration in detail view.
+* Optional: display seconds for call duration in detail view.  
   Set `customCode` for `duration_hours` in **custom\modules\Calls\metadata\detailviewdefs.php**:
   ```php
   {$fields.duration_hours.value}{$MOD.LBL_HOURS_ABBREV} {$fields.duration_minutes.value}{$MOD.LBL_MINSS_ABBREV} {$fields.asterlink_call_seconds_c.value}{$MOD.LBL_ASTERLINK_CALL_SECONDS}&nbsp;
   ```
   If this file doesn't exist, click **save & deply** on Calls DetailView layout in studio.
 * Update layouts as you want.
-* Set asterlink_ext in users profiles.
+* Set `asterlink_ext` in users profiles.
 * Create new **Client Credentials Client** in Administrator -> OAuth2 Clients and Tokens
 * Configure token ID and Secret in **config.yml**
 * Do a test run. You should see userids from suitecrm in console.
 
-You need to restart asterlink app evertime you change asterisk_ext for users.
+You need to restart asterlink app evertime you change `asterisk_ext` for users.
+
+### Call record relationships
+See `relationships` key in config.
+```yml
+  relationships:
+  -
+    module: Contacts
+    module_name: Contact
+    primary_module: false
+    show_create: true
+    name_field: full_name
+    phone_fields: [phone_mobile, phone_work]
+  -
+    module: Prospects
+    module_name: Target
+    primary_module: true
+    show_create: false
+    name_field: full_name
+    phone_fields: [phone_mobile, phone_work]
+  relate_once: false
+```
+* `relationships` - modules to search for records in. Define every new module as shown in config example
+  * `module` - SuiteCRM Module ID
+  * `module_name` - module name, that will show on popup card
+  * `primary_module` - set `true`, if this module is primary in relationship to "Calls" module
+  * `show_create` - shows create new record link on popup card
+  * `name_field` - module field for found record name
+  * `phone_fields` - module fields to search for phone number
+* `relate_once` - set `false` to search and relate records in all modules from `relationships`
 
 ## Click2Dial and Pop up card
-* Configure `endpoint_addr` and `endpoint_token` in **config.yml**. `endpoint_token` is just a secret word to access asterlink endpoint. It must be equal in both **conf.yml** and **config_override.php**.
+* Configure `endpoint_addr` and `endpoint_token` in **config.yml**. `endpoint_token` is just an any secret word you want.  
+  It must be equal in both **conf.yml** and **config_override.php**.
 * Copy [connect/suitecrm/dist/asterlink](https://github.com/serfreeman1337/asterlink/tree/master/connect/suitecrm/dist) folder to ***suitecrm*** directory.
 * Add following line to the end of the **custom/modules/logic_hooks.php** file:
   ```php
@@ -58,7 +85,7 @@ You need to restart asterlink app evertime you change asterisk_ext for users.
   $sugar_config['asterlink']['endpoint_url'] = 'http://my_endpoint_addr:my_endpoint_port';
   $sugar_config['asterlink']['endpoint_ws'] = 'ws://my_endpoint_addr:my_endpoint_port';
   ```
-* Check "***Enable click-to-call for phone numbers Information***" in SuiteCRM System Settings.
+* Check "***Enable click-to-call for phone numbers Information***" in SuiteCRM System Settings.  
   Note: SuiteCRM will only enable this for CallerID with begining plus sign. 
 
 ### Apache2 endpoint proxy
