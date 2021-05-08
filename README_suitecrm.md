@@ -23,7 +23,7 @@ Log calls for "Calls" module.
     | TextField | asterlink_uid          | Asterisk UID  | 64       |
     | Phone     | asterlink_cid          | CallerID      | 32       |
 * Add new fields for Users module:
-  * Administrator -> Studio -> Calls -> Fields
+  * Administrator -> Studio -> Users -> Fields
   * New fields:
     | Data Type | Field Name             | Display Label       | Max Size |
     |-----------|------------------------|---------------------|----------|
