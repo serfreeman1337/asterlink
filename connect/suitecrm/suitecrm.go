@@ -62,18 +62,23 @@ func (s *suitecrm) Init() {
 	}
 }
 
+func (s *suitecrm) SetOriginate(orig connect.OrigFunc) {
+	s.originate = orig
+}
+
 // NewSuiteCRMConnector func
-func NewSuiteCRMConnector(cfg *Config, originate connect.OrigFunc) connect.Connecter {
+func NewSuiteCRMConnector(cfg *Config) connect.Connecter {
 	s := &suitecrm{
 		cfg: cfg,
 		log: log.WithField("suite", true),
 		// token:     "",
 		// tokenTime: time.Now().Add(1 * time.Hour),
-		ent:       make(map[string]*entity),
-		extUID:    make(map[string]string),
-		originate: originate,
+		ent:    make(map[string]*entity),
+		extUID: make(map[string]string),
 	}
 	s.cfg.URL += "Api/"
+
+	log.Info("Using SuiteCRM Connector")
 
 	return s
 }
