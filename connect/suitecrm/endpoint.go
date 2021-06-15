@@ -26,14 +26,25 @@ func (s *suitecrm) assignedHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// no relation found
-	if len(e.Relationships) == 0 || e.Relationships[0].ID == "" {
+	if len(e.Relationships) == 0 {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	ext, ok := s.uIDtoExt(e.Relationships[0].AssignedID)
+	var assignedID string
+
+	for _, rel := range e.Relationships {
+		if rel.AssignedID == "" {
+			continue
+		}
+
+		assignedID = rel.AssignedID
+		break
+	}
+
+	ext, ok := s.uIDtoExt(assignedID)
 	if !ok {
-		cLog.WithField("uid", e.Relationships[0].AssignedID).Warn("Extension not found for user id")
+		cLog.WithField("uid", assignedID).Warn("Extension not found for user id")
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -66,19 +77,21 @@ func (s *suitecrm) originateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var e entity
+
 	// create new record for originated call
-	id, _, err := s.createCallRecord(&connect.Call{
+	err := s.createCallRecord(&connect.Call{
 		CID: r.FormValue("phone"),
 		Dir: connect.Out,
 		Ext: ext,
-	})
+	}, &e)
 
 	if err != nil {
 		cLog.Error("Failed to create call record")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	s.originate(ext, r.FormValue("phone"), id)
+	s.originate(ext, r.FormValue("phone"), e.ID)
 	w.WriteHeader(http.StatusOK)
 }
 

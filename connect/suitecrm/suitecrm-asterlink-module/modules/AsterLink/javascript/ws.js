@@ -1,5 +1,4 @@
-// serfreeman1337 // 09.04.2020 //
-let alRelModules;
+// serfreeman1337 // 15.06.21 //
 
 function alWs() {
 	// TODO: improve security
@@ -8,12 +7,8 @@ function alWs() {
 	ws.onmessage = function (e) {
 		var d = JSON.parse(e.data);
 
-		if (d.modules) {
-			alRelModules = d.modules;
-		} else {
-			d.data.time = new Date(d.data.time);
-			d.show ? alShowCard(d.data) : alRemoveCard(d.data);
-		}
+		d.data.time = new Date(d.data.time);
+		d.show ? alShowCard(d.data) : alRemoveCard(d.data);
 	};
 
 	ws.onclose = function (e) {
@@ -26,7 +21,10 @@ function alWs() {
 	};
 }
 
-const alDirDesc = [["Incoming call", "From"], ["Outgoing call", "To"]];
+const alDirDesc = [
+	[SUGAR.language.get('app_strings', 'LBL_ASTERLINK_IN'), SUGAR.language.get('app_strings', 'LBL_ASTERLINK_FROM')],
+	[SUGAR.language.get('app_strings', 'LBL_ASTERLINK_OUT'), SUGAR.language.get('app_strings', 'LBL_ASTERLINK_TO')]
+];
 
 function alShowCard(d) {
 	let c = $('.alCard[data-id="' + d.id + '"]');
@@ -61,11 +59,14 @@ function alShowCard(d) {
 <td class="alCallerId">'+ d.cid + '</td>'
 		}).appendTo(table);
 
-		for (let relModule of alRelModules) {
+		for (const [module, moduleData] of Object.entries(ASTERLINK_RELMODULES)) {
+			if (!moduleData.show_create)
+				continue;
+			
 			$('<tr />', {
 				html: '\
-<td>'+ relModule.name + ':</td>\
-<td><a class="al'+ relModule.name + 'Info" href="#" data-module="' + relModule.id + '" data-field="' + relModule.phone_field +'"></a></td>'
+<td>'+ moduleData.name + '</td>\
+<td><a class="al'+ module + 'Info" href="#" data-module="' + module + '" data-field="' + moduleData.phone_field +'"></a></td>'
 			}).appendTo(table);
 		}
 
@@ -87,10 +88,10 @@ function alShowCard(d) {
 
 	// TODO: rewrite / check with disabled ajax
 
-	if (d.related) {
-		for (let rel of d.related) {
-			let url = 'index.php?module='+rel.module+'&action=DetailView&record=' + rel.id;
-			let link = table.find('.al'+rel.module_name+'Info');
+	if (d.relations) {
+		for (let [module, rel] of Object.entries(d.relations)) {
+			let url = 'index.php?module='+module+'&action=DetailView&record=' + rel.id;
+			let link = table.find('.al'+module+'Info');
 	
 			if (link.length) {
 				link.text(rel.name);
@@ -101,11 +102,11 @@ function alShowCard(d) {
 			} else {
 				$('<tr />', {
 					html: '\
-<td>'+ rel.module_name + ':</td>\
-<td><a class="al'+ rel.module_name + 'Info" href="'+url+'">'+rel.name+'</a></td>'
+<td>'+ ASTERLINK_RELMODULES[module].name + '</td>\
+<td><a class="al'+ module + 'Info" href="'+url+'">'+rel.name+'</a></td>'
 				}).appendTo(table);
 	
-				link = table.find('.al' + rel.module_name + 'Info');
+				link = table.find('.al' + module + 'Info');
 				link.off();
 			}
 	
@@ -119,15 +120,13 @@ function alShowCard(d) {
 	table.find('tr:not(:first-child) a').each(function() {
 		let link = $(this);
 
-		console.log(link);
-
 		if (link.attr('href') != '#') {
 			return;
 		}
 
 		let url = 'index.php?module='+link.data('module')+'&action=EditView';
 
-		link.text('--- create ---');
+		link.text(SUGAR.language.get('app_strings', 'LBL_ASTERLINK_CREATE'));
 		link.attr('href', url);
 		link.off();
 
@@ -166,13 +165,13 @@ function alShowCard(d) {
 		let durationStr = '';
 
 		if (!d.answered) {
-			durationStr = 'awaiting';
+			durationStr = SUGAR.language.get('app_strings', 'LBL_ASTERLINK_W');
 
 			if (duration.getUTCMinutes()) {
-				durationStr += ' ' + duration.getUTCMinutes() + 'm.';
+				durationStr += ' ' + duration.getUTCMinutes() + SUGAR.language.get('app_strings', 'LBL_ASTERLINK_M');
 			}
 
-			durationStr += ' ' + duration.getSeconds() + 's.';
+			durationStr += ' ' + duration.getSeconds() + SUGAR.language.get('app_strings', 'LBL_ASTERLINK_S');
 		} else {
 			durationStr += ('00' + duration.getUTCMinutes()).slice(-2) + ':' + ('00' + duration.getSeconds()).slice(-2);
 		}

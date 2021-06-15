@@ -72,27 +72,6 @@ func (s *suitecrm) wsHandler(w http.ResponseWriter, r *http.Request) {
 		d <- true
 	}()
 
-	// send configured relation modules
-	type module struct {
-		ID    string `json:"id"`
-		Name  string `json:"name"`
-		Field string `json:"phone_field"`
-	}
-	var data struct {
-		Modules []module `json:"modules"`
-	}
-	for _, rs := range s.cfg.Relationships {
-		if !rs.ShowCreate {
-			continue
-		}
-
-		data.Modules = append(data.Modules, module{rs.Module, rs.ModuleName, rs.PhoneFields[0]})
-	}
-	c.mux.Lock()
-	c.conn.SetWriteDeadline(time.Now().Add(writeWait))
-	c.conn.WriteJSON(data)
-	c.mux.Unlock()
-
 	// send active calls
 	for _, e := range s.ent {
 		e.exts.Range(func(key interface{}, value interface{}) bool {
