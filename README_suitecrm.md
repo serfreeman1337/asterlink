@@ -15,14 +15,14 @@ Features:
   Click `Add seconds to call duration view field` on the **AsterLink Settings** SuiteCRM Administrator page.
 * Update layouts as you want.
 * Set `Asterisk Extensions` in users profiles.
-* Do a test run. You should see userids from suitecrm in console.
+* Do a test run of asterlink app. You should see userids from suitecrm in console.
 
-You need to restart asterlink app evertime you change asterisk extensions for users.
+Note: You need to restart asterlink app evertime you change asterisk extensions for users.
 
-## Click2Dial and Pop up card
+## Click-to-Call and Pop up card
 * Configure `endpoint_addr` in the  **conf.yml** file.
 * Configure `Endpoint URL` for Click-to-Call function and `WebSocket URL` for pop up card on the **AsterLink Settings** SuiteCRM Administrator page.
-* Check`Enable click-to-call for phone numbers Information` on the SuiteCRM System Settings page.  
+* Check `Enable click-to-call for phone numbers Information` on the SuiteCRM System Settings page.  
   Note: SuiteCRM will only enable this for CallerID with begining plus sign. 
 
 ### Apache2 endpoint proxy
@@ -47,3 +47,11 @@ same => n,GotoIf($[${ASSIGNED}]?from-did-direct,${ASSIGNED},1)
 same => n,Goto(ext-queues,400,1)
 same => n,Hangup
 ```
+
+## Upgrade from 0.3 version
+* Its highly recomended to backup DB before upgrading.
+* Remove logic hook from **custom/modules/logic_hooks.php** by removing a line with the `asterlink javascript`.
+* Remove any lines with `$sugar_config['asterlink']` from **config_override.php**.
+* Delete **asterlink** folder from the suitecrm directory.
+* Install AsterLink Module.
+* Migrate relationships config from **conf.yml** to AsterLink Module settings.
