@@ -45,4 +45,5 @@ type Connecter interface {
 	StopDial(call *Call, ext string)
 	Answer(call *Call, ext string)
 	End(call *Call, cause string)
+	SetOriginate(orig OrigFunc)
 }

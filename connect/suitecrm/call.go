@@ -24,7 +24,7 @@ func (s *suitecrm) Start(c *connect.Call) {
 
 	var err error
 
-	e.ID, e.Relationships, err = s.createCallRecord(c)
+	err = s.createCallRecord(c, e)
 
 	if err != nil {
 		delete(s.ent, c.LID)
@@ -47,9 +47,10 @@ func (s *suitecrm) OrigStart(c *connect.Call, oID string) {
 	// TODO: rewrite
 	e.mux.Lock()
 
-	for rel := range s.findRelation(c.CID) {
-		e.Relationships = append(e.Relationships, rel)
+	params := map[string]interface{}{
+		"id": oID,
 	}
+	s.rest("POST", "get_relations", params, &e.Relationships)
 
 	e.mux.Unlock()
 }
@@ -66,17 +67,14 @@ func (s *suitecrm) Dial(c *connect.Call, ext string) {
 
 	if c.O { // update uid for originated call
 		params := map[string]interface{}{
+			"id": e.ID,
 			"data": map[string]interface{}{
-				"type": "Calls",
-				"id":   e.ID,
-				"attributes": map[string]string{
-					"asterlink_uid_c": c.LID,
-				},
+				"asterlink_uid_c": c.LID,
 			},
 		}
 
 		e.mux.Lock()
-		s.rest("PATCH", "module", params, nil)
+		s.rest("POST", "update_call_record", params, nil)
 		e.mux.Unlock()
 	}
 }
@@ -124,15 +122,12 @@ func (s *suitecrm) Answer(c *connect.Call, ext string) {
 
 	// assign answered user to call record
 	params := map[string]interface{}{
-		"data": map[string]interface{}{
-			"type":       "Calls",
-			"id":         e.ID,
-			"attributes": attr,
-		},
+		"id":   e.ID,
+		"data": attr,
 	}
 
 	e.mux.Lock()
-	s.rest("PATCH", "module", params, nil)
+	s.rest("POST", "update_call_record", params, nil)
 	e.mux.Unlock()
 }
 
@@ -172,21 +167,18 @@ func (s *suitecrm) End(c *connect.Call, cause string) {
 	ss := int(d.Seconds())
 
 	params := map[string]interface{}{
+		"id": e.ID,
 		"data": map[string]interface{}{
-			"type": "Calls",
-			"id":   e.ID,
-			"attributes": map[string]interface{}{
-				"status":                   status,
-				"duration_hours":           hh,
-				"duration_minutes":         mm,
-				"asterlink_call_seconds_c": ss,
-				"date_end":                 time.Now().UTC().Format(mysqlFormat),
-				// "assigned_user_id":         uID,
-			},
+			"status":                   status,
+			"duration_hours":           hh,
+			"duration_minutes":         mm,
+			"asterlink_call_seconds_c": ss,
+			"date_end":                 time.Now().UTC().Format(mysqlFormat),
+			// "assigned_user_id":         uID,
 		},
 	}
 
 	e.mux.Lock()
-	s.rest("PATCH", "module", params, nil)
+	s.rest("POST", "update_call_record", params, nil)
 	e.mux.Unlock()
 }

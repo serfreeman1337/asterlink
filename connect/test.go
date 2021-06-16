@@ -24,6 +24,9 @@ func (con *du) Answer(c *Call, ext string) {
 func (con *du) End(c *Call, cause string) {
 }
 
+func (con *du) SetOriginate(orig OrigFunc) {
+}
+
 // NewDummyConnector func
 func NewDummyConnector() Connecter {
 	c := &du{}

@@ -28,21 +28,7 @@ var upgrader = websocket.Upgrader{
 func (s *suitecrm) wsHandler(w http.ResponseWriter, r *http.Request) {
 	cLog := s.log.WithField("api", "ws")
 
-	if token := r.URL.Query().Get("token"); token == "" || token != s.cfg.EndpointToken {
-		w.WriteHeader(http.StatusForbidden)
-		cLog.WithField("remote_addr", r.RemoteAddr).Warn("Invalid endpoint token")
-
-		return
-	}
-
-	ext, ok := s.uIDtoExt(r.URL.Query().Get("user"))
-	if !ok {
-		w.WriteHeader(http.StatusNotFound)
-		cLog.WithField("uid", r.FormValue("user")).Warn("Extension not found for user id")
-
-		return
-	}
-
+	ext := r.Context().Value("ext").(string)
 	cLog = cLog.WithFields(log.Fields{"remote_addr": r.RemoteAddr, "ext": ext})
 
 	var c *wsClient
@@ -71,27 +57,6 @@ func (s *suitecrm) wsHandler(w http.ResponseWriter, r *http.Request) {
 		// stop pinger routine
 		d <- true
 	}()
-
-	// send configured relation modules
-	type module struct {
-		ID    string `json:"id"`
-		Name  string `json:"name"`
-		Field string `json:"phone_field"`
-	}
-	var data struct {
-		Modules []module `json:"modules"`
-	}
-	for _, rs := range s.cfg.Relationships {
-		if !rs.ShowCreate {
-			continue
-		}
-
-		data.Modules = append(data.Modules, module{rs.Module, rs.ModuleName, rs.PhoneFields[0]})
-	}
-	c.mux.Lock()
-	c.conn.SetWriteDeadline(time.Now().Add(writeWait))
-	c.conn.WriteJSON(data)
-	c.mux.Unlock()
 
 	// send active calls
 	for _, e := range s.ent {

@@ -52,8 +52,12 @@ func (b *b24) Init() {
 	}
 }
 
+func (b *b24) SetOriginate(orig connect.OrigFunc) {
+	b.originate = orig
+}
+
 // NewB24Connector connector
-func NewB24Connector(cfg *Config, originate connect.OrigFunc) connect.Connecter {
+func NewB24Connector(cfg *Config) connect.Connecter {
 	client := http.Client{
 		Timeout: time.Second * 30,
 	}
@@ -69,7 +73,6 @@ func NewB24Connector(cfg *Config, originate connect.OrigFunc) connect.Connecter 
 	b := &b24{
 		cfg:       cfg,
 		log:       log.WithField("b24", true),
-		originate: originate,
 		eUID:      make(map[string]int),
 		ent:       make(map[string]*entity),
 		netClient: &client,
@@ -87,6 +90,8 @@ func NewB24Connector(cfg *Config, originate connect.OrigFunc) connect.Connecter 
 			"42": "503",
 		},
 	}
+
+	log.Info("Using Bitrix24 Connector")
 
 	return b
 }

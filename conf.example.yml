@@ -41,23 +41,5 @@ bitrix24:
   # - {expr: "^\\+(\\d{5})(\\d{3})(\\d{2})(\\d{2})$", repl: "(+$1) $2-$3-$4"}	# (+XXXXX) XXX-XX-XX
 # suitecrm:
 #   url: http://my.suitecrm/instance/
-#   client_id: my_client_id
-#   client_secret: my_client_secret
 #   endpoint_token: my_endpoint_token
 #   endpoint_addr: "0.0.0.0:5678"
-#   relationships:
-#   -
-#     module: Contacts
-#     module_name: Contact
-#     primary_module: false
-#     show_create: true
-#     name_field: full_name
-#     phone_fields: [phone_mobile, phone_work]
-#   # -
-#   #   module: Prospects
-#   #   module_name: Target
-#   #   primary_module: true
-#   #   show_create: false
-#   #   name_field: full_name
-#   #   phone_fields: [phone_mobile, phone_work]
-#   relate_once: false

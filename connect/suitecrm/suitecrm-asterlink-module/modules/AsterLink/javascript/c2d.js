@@ -14,12 +14,18 @@ function alInitFields() {
                     ...\
                 </span>');
 
-            $.post(ASTERLINK_URL+'/originate/', {
-                token: ASTERLINK_TOKEN,
-                user: ASTERLINK_USER,
-                phone: a.text()
-            }, function() {
-                a.parent().children('.alProgress').remove();
+            $.ajax({
+                url: ASTERLINK_URL+'/originate/',
+                type: 'post',
+                data: {
+                    phone: a.text()
+                },
+                headers: {
+                    'X-Asterlink-Token': ASTERLINK_TOKEN,
+                },
+                success: () => {
+                    a.parent().children('.alProgress').remove();
+                }
             });
         }
     });
