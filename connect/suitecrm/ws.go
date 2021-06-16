@@ -28,21 +28,7 @@ var upgrader = websocket.Upgrader{
 func (s *suitecrm) wsHandler(w http.ResponseWriter, r *http.Request) {
 	cLog := s.log.WithField("api", "ws")
 
-	if token := r.URL.Query().Get("token"); token == "" || token != s.cfg.EndpointToken {
-		w.WriteHeader(http.StatusForbidden)
-		cLog.WithField("remote_addr", r.RemoteAddr).Warn("Invalid endpoint token")
-
-		return
-	}
-
-	ext, ok := s.uIDtoExt(r.URL.Query().Get("user"))
-	if !ok {
-		w.WriteHeader(http.StatusNotFound)
-		cLog.WithField("uid", r.FormValue("user")).Warn("Extension not found for user id")
-
-		return
-	}
-
+	ext := r.Context().Value("ext").(string)
 	cLog = cLog.WithFields(log.Fields{"remote_addr": r.RemoteAddr, "ext": ext})
 
 	var c *wsClient

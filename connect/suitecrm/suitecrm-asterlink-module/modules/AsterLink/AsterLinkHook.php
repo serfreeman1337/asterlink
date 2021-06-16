@@ -40,12 +40,22 @@ class AsterLink {
 			return;
         }
 
+        $jwtHeader = json_encode(['typ' => 'JWT', 'alg' => 'HS256']);
+        $jwtPayload = json_encode(['id' => $current_user->id]);
+
+        $base64UrlHeader = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($jwtHeader));
+        $base64UrlPayload = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($jwtPayload));
+
+        $jwtSignature = hash_hmac('sha256', $base64UrlHeader.".".$base64UrlPayload, $sugar_config['asterlink']['endpoint_token'], true);
+        $base64UrlSignature = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($jwtSignature));
+
+        $jwt = $base64UrlHeader.".".$base64UrlPayload.".".$base64UrlSignature;
+ 
         echo '
 <!-- AsterLink -->
     <script>
-        const ASTERLINK_TOKEN = "'.$sugar_config['asterlink']['endpoint_token'].'";
+        const ASTERLINK_TOKEN = "'.$jwt.'";
         const ASTERLINK_URL = "'.$sugar_config['asterlink']['endpoint_url'].'";
-        const ASTERLINK_USER = "'.$current_user->id.'";
     </script>
 
     <script src="'.getJSPath('modules/AsterLink/javascript/c2d.js').'"></script>

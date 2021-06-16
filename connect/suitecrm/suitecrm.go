@@ -35,10 +35,11 @@ func (s *suitecrm) Init() {
 
 	if s.cfg.EndpointAddr != "" {
 		http.HandleFunc("/assigned/", s.assignedHandler)
-		http.HandleFunc("/originate/", s.originateHandler)
+
+		http.Handle("/originate/", s.tokenMiddleware(http.HandlerFunc(s.originateHandler)))
 
 		s.wsRoom = make(map[string]map[*wsClient]bool)
-		http.HandleFunc("/ws/", s.wsHandler)
+		http.Handle("/ws/", s.tokenMiddleware(http.HandlerFunc(s.wsHandler)))
 
 		go func() {
 			s.log.WithField("addr", s.cfg.EndpointAddr).Info("Enabling web server")

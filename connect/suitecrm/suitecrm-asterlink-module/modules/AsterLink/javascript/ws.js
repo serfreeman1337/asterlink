@@ -2,7 +2,7 @@
 
 function alWs() {
 	// TODO: improve security
-	let ws = new WebSocket(ASTERLINK_WS + '/ws/?token=' + ASTERLINK_TOKEN + '&user=' + ASTERLINK_USER);
+	let ws = new WebSocket(ASTERLINK_WS + '/ws/?token=' + ASTERLINK_TOKEN);
 
 	ws.onmessage = function (e) {
 		var d = JSON.parse(e.data);
