@@ -23,7 +23,8 @@ type Config struct {
 		Expr string
 		Repl string
 	} `yaml:"search_format"`
-	DefUID int `yaml:"default_user"`
+	DefUID      int  `yaml:"default_user"`
+	CreateLeads bool `yaml:"create_leads"`
 }
 
 type b24 struct {

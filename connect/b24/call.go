@@ -25,10 +25,11 @@ func (b *b24) Start(c *connect.Call) {
 	}
 
 	var params struct {
-		UID   int    `json:"USER_ID"`
-		Phone string `json:"PHONE_NUMBER"`
-		Type  int    `json:"TYPE"`
-		DID   string `json:"LINE_NUMBER"`
+		UID       int    `json:"USER_ID"`
+		Phone     string `json:"PHONE_NUMBER"`
+		Type      int    `json:"TYPE"`
+		DID       string `json:"LINE_NUMBER"`
+		CRMCreate int    `json:"CRM_CREATE"`
 	}
 
 	params.UID = uID
@@ -39,6 +40,10 @@ func (b *b24) Start(c *connect.Call) {
 		params.Type = 1
 	} else {
 		params.Type = 2
+	}
+
+	if b.cfg.CreateLeads {
+		params.CRMCreate = 1
 	}
 
 	var r struct {
@@ -101,7 +106,7 @@ func (b *b24) End(c *connect.Call, cause string) {
 	} else {
 		params.Dur = int(time.Since(c.TimeCall).Seconds())
 
-		if cause == "16" {
+		if cause == "16" || cause == "127" { // TODO: check asterisk 18+ AST_CAUSE_INTERWORKING cause for hangup
 			if c.Dir == connect.In {
 				params.Status = "304" // This call was skipped
 			} else {

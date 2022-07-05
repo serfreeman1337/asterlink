@@ -30,6 +30,7 @@ bitrix24:
   webhook_originate_token: my_originate_token
   webhook_endpoint_addr: "0.0.0.0:5678"
   # rec_upload: "http://mypbx.example.org/recfiles/"
+  # create_leads: true
   # search_format:
   # - {expr: ".*", repl: "$0"}
   # - {expr: "^\\+(\\d{5})(\\d{7})$", repl: "+$1 $2"} 				# +XXXXX XXXXXXX

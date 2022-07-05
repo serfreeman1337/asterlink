@@ -97,6 +97,7 @@ switch ($action) {
             $callBean->{$k} = $v;
         }
 
+        $callBean->date_start = null; // prevent suitecrm from date fields ("save" function in modules/Calls/Call.php)
         $callBean->save();
     break;
     case 'get_relations':

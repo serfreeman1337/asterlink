@@ -58,24 +58,43 @@ func (b *b24) findContact(phone string) (*contactInfo, error) {
 }
 
 func (b *b24) updateUsers() {
-	// TODO: Check how it works with large user list!
-	var r struct {
-		Result []struct {
-			ID    int    `json:"ID,string"`
-			Phone string `json:"UF_PHONE_INNER"`
+	nTotal := 1
+	nRet := 0
+
+ret:
+	for nTotal > nRet {
+		var r struct {
+			Result []struct {
+				ID    int    `json:"ID,string"`
+				Phone string `json:"UF_PHONE_INNER"`
+			}
+			Total int
 		}
-	}
-	err := b.req("user.get", map[string]map[string]string{
-		"filter": {"USER_TYPE": "employee"},
-	}, &r)
 
-	if err != nil {
-		b.log.Error("Failed to update users list")
-		return
-	}
+		err := b.req("user.get", map[string]interface{}{
+			"sort":   "UF_PHONE_INNER", // desc sorting for UF_PHONE_INNER should bring users without assigned extensions to the end
+			"order":  "DESC",
+			"filter": map[string]string{"USER_TYPE": "employee"},
+			"start":  nRet,
+		}, &r)
 
-	for _, v := range r.Result {
-		if v.Phone != "" {
+		if err != nil {
+			b.log.Error("Failed to update users list")
+			return
+		}
+
+		if r.Total == 0 || len(r.Result) == 0 {
+			break
+		}
+
+		nTotal = r.Total
+		nRet += len(r.Result)
+
+		for _, v := range r.Result {
+			if v.Phone == "" { // there should be no more users with assigned extensions
+				break ret
+			}
+
 			b.eUID[v.Phone] = v.ID
 		}
 	}
