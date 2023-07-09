@@ -1,4 +1,4 @@
-// +build !suitecrm
+//go:build !suitecrm
 
 package main
 

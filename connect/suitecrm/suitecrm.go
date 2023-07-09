@@ -2,7 +2,6 @@ package suitecrm
 
 import (
 	"net/http"
-	"sync"
 
 	log "github.com/sirupsen/logrus"
 
@@ -23,7 +22,6 @@ type Config struct {
 type suitecrm struct {
 	cfg       *Config
 	log       *log.Entry
-	mux       sync.Mutex
 	ent       map[string]*entity
 	extUID    map[string]string
 	wsRoom    map[string]map[*wsClient]bool

@@ -11,11 +11,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type contact struct {
-	ID         string `json:"id,omitempty"`
-	Name       string `json:"name,omitempty"`
-	AssignedID string `json:"assigned,omitempty"`
-}
+// type contact struct {
+// 	ID         string `json:"id,omitempty"`
+// 	Name       string `json:"name,omitempty"`
+// 	AssignedID string `json:"assigned,omitempty"`
+// }
 
 type relation struct {
 	ID         string `json:"id,omitempty"`

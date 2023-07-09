@@ -10,6 +10,8 @@ import (
 	"github.com/serfreeman1337/asterlink/connect"
 )
 
+type ExtKey struct{}
+
 func (s *suitecrm) assignedHandler(w http.ResponseWriter, r *http.Request) {
 	cLog := s.log.WithField("api", "assigned")
 	req := strings.Split(r.RequestURI, "/")[1:]
@@ -63,7 +65,7 @@ func (s *suitecrm) originateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ext := r.Context().Value("ext").(string)
+	ext := r.Context().Value(ExtKey{}).(string)
 	r.ParseForm()
 
 	var e entity
@@ -111,7 +113,7 @@ func (s *suitecrm) tokenMiddleware(next http.Handler) http.Handler {
 
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 			}
 
 			return []byte(s.cfg.EndpointToken), nil
@@ -130,10 +132,8 @@ func (s *suitecrm) tokenMiddleware(next http.Handler) http.Handler {
 				http.Error(w, "Extension not found for user id", http.StatusBadRequest)
 			}
 
-			ctx := r.Context()
-			ctx = context.WithValue(ctx, "ext", ext)
-			r = r.WithContext(ctx)
-			next.ServeHTTP(w, r)
+			ctx := context.WithValue(r.Context(), ExtKey{}, ext)
+			next.ServeHTTP(w, r.WithContext(ctx))
 		}
 	})
 }

@@ -28,7 +28,7 @@ var upgrader = websocket.Upgrader{
 func (s *suitecrm) wsHandler(w http.ResponseWriter, r *http.Request) {
 	cLog := s.log.WithField("api", "ws")
 
-	ext := r.Context().Value("ext").(string)
+	ext := r.Context().Value(ExtKey{}).(string)
 	cLog = cLog.WithFields(log.Fields{"remote_addr": r.RemoteAddr, "ext": ext})
 
 	var c *wsClient

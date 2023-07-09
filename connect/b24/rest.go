@@ -54,7 +54,7 @@ func (b *b24) findContact(phone string) (*contactInfo, error) {
 
 		return &r.Result[0], nil
 	}
-	return nil, errors.New("Contact not found")
+	return nil, errors.New("contact not found")
 }
 
 func (b *b24) updateUsers() {

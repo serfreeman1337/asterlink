@@ -1,4 +1,4 @@
-// +build !b24
+//go:build !b24
 
 package main
 

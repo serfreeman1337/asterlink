@@ -14,15 +14,11 @@ type entity struct {
 }
 
 func (e *entity) isRegistred() bool {
-	if e.ID != "" {
-		return true
-	}
-
 	e.mux.Lock()
+
+	registred := e.ID != ""
+
 	e.mux.Unlock()
 
-	if e.ID == "" {
-		return false
-	}
-	return true
+	return registred
 }

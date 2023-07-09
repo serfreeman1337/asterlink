@@ -22,11 +22,7 @@ func (s *suitecrm) Start(c *connect.Call) {
 	e.mux.Lock()
 	defer e.mux.Unlock()
 
-	var err error
-
-	err = s.createCallRecord(c, e)
-
-	if err != nil {
+	if err := s.createCallRecord(c, e); err != nil {
 		delete(s.ent, c.LID)
 		return
 	}
