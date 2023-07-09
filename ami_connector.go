@@ -109,13 +109,23 @@ func (a *amiConnector) formatNum(cID string, isCid bool) (string, bool) {
 	return "", false
 }
 
-func (a *amiConnector) useRec(c *connect.Call, uID string) {
-	if v, ok := a.rec[uID]; ok {
-		c.Rec = v
-		delete(a.rec, uID)
+func (a *amiConnector) useRec(c *connect.Call, uID string, lID string) {
+	// Check recording with uniqueid (when recoging is turned on extension).
+	rec, ok := a.rec[uID]
 
-		c.Log.WithField("rec", c.Rec).Debug("Set recording file")
+	if !ok { // Then look for recording with linkedid (when recording is turned on queue etc.).
+		rec, ok = a.rec[lID]
+		uID = lID
 	}
+
+	if !ok {
+		return
+	}
+
+	c.Rec = rec
+	delete(a.rec, uID)
+
+	c.Log.WithField("rec", c.Rec).Debug("Set recording file")
 }
 
 func (a *amiConnector) isContext(context string, of []string) bool {
@@ -274,7 +284,7 @@ func (a *amiConnector) onDialBegin(e map[string]string) {
 			c.Ext = e["DestCallerIDNum"]
 
 			c.Log.WithField("ext", c.Ext).Debug("From")
-			a.useRec(c, e["Uniqueid"])
+			a.useRec(c, e["Uniqueid"], e["Linkedid"])
 
 			go a.connector.Dial(c, c.Ext)
 		} else if a.isContext(e["Context"], a.cfg.DP.Out) {
@@ -323,7 +333,7 @@ func (a *amiConnector) onDialEnd(e map[string]string) {
 		c.ChDest = e["DestChannel"]
 		c.Ext = e["DestCallerIDNum"]
 
-		a.useRec(c, e["Uniqueid"])
+		a.useRec(c, e["Uniqueid"], e["Linkedid"])
 
 		c.Log.WithField("ext", c.Ext).Debug("Answer")
 		go a.connector.Answer(c, c.Ext)
@@ -343,7 +353,7 @@ func (a *amiConnector) onDialEnd(e map[string]string) {
 
 			c.Ext = rext[1]
 			c.Log.WithField("ext", c.Ext).Debug("Answer 2")
-			a.useRec(c, e["Uniqueid"])
+			a.useRec(c, e["Uniqueid"], e["Linkedid"])
 			go a.connector.Answer(c, c.Ext)
 
 			return
@@ -358,7 +368,7 @@ func (a *amiConnector) onDialEnd(e map[string]string) {
 		c.Ext = rext[1]
 
 		c.Log.WithField("ext", c.Ext).Debug("Dial 2")
-		a.useRec(c, e["Uniqueid"])
+		a.useRec(c, e["Uniqueid"], e["Linkedid"])
 
 		go a.connector.Answer(c, rext[1])
 
