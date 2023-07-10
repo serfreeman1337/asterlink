@@ -2,6 +2,8 @@ package suitecrm
 
 import (
 	"net/http"
+	"sync"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -24,7 +26,8 @@ type suitecrm struct {
 	log       *log.Entry
 	ent       map[string]*entity
 	extUID    map[string]string
-	wsRoom    map[string]map[*wsClient]bool
+	m         sync.Mutex
+	streams   streamsMap
 	originate connect.OrigFunc
 }
 
@@ -36,12 +39,20 @@ func (s *suitecrm) Init() {
 
 		http.Handle("/originate/", s.tokenMiddleware(http.HandlerFunc(s.originateHandler)))
 
-		s.wsRoom = make(map[string]map[*wsClient]bool)
-		http.Handle("/ws/", s.tokenMiddleware(http.HandlerFunc(s.wsHandler)))
+		s.streams = make(streamsMap)
+		http.Handle("/stream/", s.tokenMiddleware(http.HandlerFunc(s.streamHandler)))
 
 		go func() {
 			s.log.WithField("addr", s.cfg.EndpointAddr).Info("Enabling web server")
-			err := http.ListenAndServe(s.cfg.EndpointAddr, nil)
+
+			srv := &http.Server{
+				Addr:         s.cfg.EndpointAddr,
+				ReadTimeout:  10 * time.Second,
+				WriteTimeout: 10 * time.Second,
+			}
+
+			err := srv.ListenAndServe()
+
 			if err != nil {
 				s.log.Fatal(err)
 			}

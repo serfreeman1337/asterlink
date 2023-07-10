@@ -1,4 +1,3 @@
-
 <form name="ConfigureSettings" id="EditView" method="POST">
 	<input type="hidden" name="module" value="AsterLink">
 	<input type="hidden" name="campaignConfig" value="true">
@@ -49,16 +48,7 @@
 								{sugar_help text=$MOD.LBL_CONFIG_URL_TT}
 							</td>
 							<td>
-								<input name="endpoint_url" tabindex="1" maxlength="128" type="text" value="{$ENDPOINT_URL}" style="width: 40%;">
-							</td>
-						</tr>
-						<tr>
-							<td width="15%" scope="row">
-								{$MOD.LBL_CONFIG_WS}
-								{sugar_help text=$MOD.LBL_CONFIG_WS_TT}
-							</td>
-							<td>
-								<input name="endpoint_ws" tabindex="1" maxlength="128" type="text" value="{$ENDPOINT_WS}" style="width: 40%;">
+								<input name="endpoint_url" tabindex="1" maxlength="128" type="text" placeholder="http://localhost:5678" value="{$ENDPOINT_URL}" style="width: 40%;">
 							</td>
 						</tr>
 					</table>

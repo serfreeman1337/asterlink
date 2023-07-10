@@ -59,7 +59,7 @@ func (s *suitecrm) Dial(c *connect.Call, ext string) {
 
 	e.exts.Store(ext, true)
 	e.TimeStamp = c.TimeDial
-	s.wsBroadcast(ext, true, e)
+	s.notify(ext, true, e)
 
 	if c.O { // update uid for originated call
 		params := map[string]interface{}{
@@ -82,7 +82,7 @@ func (s *suitecrm) StopDial(c *connect.Call, ext string) {
 	}
 
 	e.exts.Delete(ext)
-	s.wsBroadcast(ext, false, e)
+	s.notify(ext, false, e)
 }
 
 func (s *suitecrm) Answer(c *connect.Call, ext string) {
@@ -100,7 +100,7 @@ func (s *suitecrm) Answer(c *connect.Call, ext string) {
 	e.TimeStamp = c.TimeAnswer
 	e.IsAnswered = true
 	e.DID = c.DID
-	s.wsBroadcast(ext, true, e)
+	s.notify(ext, true, e)
 
 	// update user id for incoming call on answer
 	// or set DID for originated call
@@ -137,7 +137,7 @@ func (s *suitecrm) End(c *connect.Call, cause string) {
 	e.exts.Range(func(key interface{}, value interface{}) bool {
 		e.exts.Delete(key)
 
-		s.wsBroadcast(key.(string), false, e)
+		s.notify(key.(string), false, e)
 
 		return true
 	})

@@ -73,12 +73,6 @@ class AsterLinkController extends SugarController
         } else {
             unset($sugar_config['asterlink']['endpoint_url']);
         }
-        
-        if (isset($_POST['endpoint_ws'])) {
-            $sugar_config['asterlink']['endpoint_ws'] = $_POST['endpoint_ws'];
-        } else {
-            unset($sugar_config['asterlink']['endpoint_ws']);
-        }
 
         if (isset($_POST['relate_once'])) {
             $sugar_config['asterlink']['relate_once'] = true;

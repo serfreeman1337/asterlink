@@ -130,6 +130,7 @@ func (s *suitecrm) tokenMiddleware(next http.Handler) http.Handler {
 
 			if !ok {
 				http.Error(w, "Extension not found for user id", http.StatusBadRequest)
+				return
 			}
 
 			ctx := context.WithValue(r.Context(), ExtKey{}, ext)

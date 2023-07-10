@@ -1,4 +1,4 @@
-<?php // serfreeman1337 // 15.06.21 //
+<?php // serfreeman1337 // 10.07.2023 //
 
 if (!defined('sugarEntry') || !sugarEntry) die('Not A Valid Entry Point');
 
@@ -24,71 +24,56 @@ class AsterLink {
         }
 
         $isDetail = (!empty($_REQUEST['action']) && in_array($_REQUEST['action'], array('index', 'DetailView')));
-        $hasWs = !empty($sugar_config['asterlink']['endpoint_ws']);
 
-        if (!empty($_REQUEST['ajax_load'])) { // SuiteCRM ajax loading
-            if ($isDetail) { // reenable click2dial
+        if (!empty($_REQUEST['ajax_load'])) { // SuiteCRM ajax loading.
+            if ($isDetail) { // Re-enable click2dial.
                 echo '<script>alInitFields();</script>';
-            }
-
-            if ($hasWs && 
-                !empty($_REQUEST['action']) && $_REQUEST['action'] == 'EditView'
-            ) {
-                echo '<script>alFillContact();</script>';
             }
 
 			return;
         }
 
-        $jwtHeader = json_encode(['typ' => 'JWT', 'alg' => 'HS256']);
-        $jwtPayload = json_encode(['id' => $current_user->id]);
+        $base64url_encode = function($data) {
+            return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
+        };
 
-        $base64UrlHeader = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($jwtHeader));
-        $base64UrlPayload = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($jwtPayload));
-
-        $jwtSignature = hash_hmac('sha256', $base64UrlHeader.".".$base64UrlPayload, $sugar_config['asterlink']['endpoint_token'], true);
-        $base64UrlSignature = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($jwtSignature));
-
-        $jwt = $base64UrlHeader.".".$base64UrlPayload.".".$base64UrlSignature;
+        $header = $base64url_encode(json_encode(['typ' => 'JWT', 'alg' => 'HS256']));
+        $payload = $base64url_encode(json_encode(['id' => $current_user->id]));
+        $signature = $base64url_encode(
+            hash_hmac('sha256', $header.'.'.$payload, $sugar_config['asterlink']['endpoint_token'], true)
+        );
  
         echo '
 <!-- AsterLink -->
-    <script>
-        const ASTERLINK_TOKEN = "'.$jwt.'";
-        const ASTERLINK_URL = "'.$sugar_config['asterlink']['endpoint_url'].'";
-    </script>
-
-    <script src="'.getJSPath('modules/AsterLink/javascript/c2d.js').'"></script>
-    '.(($isDetail) ? '<script>alInitFields();</script>' : '');
-
-    if ($hasWs) {
-        global $app_list_strings;
-
-
+<script>
+    const ASTERLINK_TOKEN = \''.($header.'.'.$payload.'.'.$signature).'\';
+    const ASTERLINK_URL = \''.htmlspecialchars($sugar_config['asterlink']['endpoint_url']).'\';
+    const ASTERLINK_WORKER = \'modules/AsterLink/javascript/asterlink.worker.js\';
+    const ASTERLINK_STREAM = ASTERLINK_URL + \'/stream?token=\' + ASTERLINK_TOKEN;
+    const ASTERLINK_RELMODULES = {';
+        // what have I done ...
+        foreach ($sugar_config['asterlink']['relationships'] as $rel_config) {
+            echo "
+            '".$rel_config['module']."': {
+                show_create: ".($rel_config['show_create'] ? 'true' : 'false').",
+                phone_field: '".htmlspecialchars($rel_config['phone_fields'][0])."'
+            },";
+        }
+        
         echo '
-            <script src="'.getJSPath('modules/AsterLink/javascript/ws.js').'"></script>
-            <script>
-                const ASTERLINK_WS = "'.$sugar_config['asterlink']['endpoint_ws'].'";
-                const ASTERLINK_RELMODULES = {';
+    };';
     
-            // whate have I done ...
-            foreach ($sugar_config['asterlink']['relationships'] as $rel_config) {
-                $name = $app_list_strings['moduleListSingular'][$rel_config['module']] ?? 
-                    ($app_list_strings['parent_type_display'][$rel_config['module']] ?? $rel_config['module']);
-                echo "'".$rel_config['module']."': {
-                    name: '".$name."',
-                    show_create: ".($rel_config['show_create'] ? 'true' : 'false').",
-                    phone_field: '".$rel_config['phone_fields'][0]."'
-                },";
-            }
-
-        echo '};
-                alWs();
-            </script>
-        ';
+    echo '
+</script>
+<script src="'.getJSPath('modules/AsterLink/javascript/asterlink.js').'"></script>';
+    if ($isDetail) {
+        echo '
+<script>alInitFields();</script>
+    ';
     }
 
-    echo '<!-- /AsterLink -->
+    echo '
+<!-- /AsterLink -->
 ';
     }
 }
