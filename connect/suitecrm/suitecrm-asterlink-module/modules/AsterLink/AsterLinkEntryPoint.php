@@ -1,4 +1,4 @@
-<?php // serfreeman1337 // 15.06.21 //
+<?php // serfreeman1337 // 11.07.2023 //
 
 if(!defined('sugarEntry') || !sugarEntry) die('Not A Valid Entry Point');
 
@@ -42,6 +42,8 @@ switch ($action) {
             $callBean->{$k} = $v;
         }
 
+        $callBean->parent_type = 'Accounts'; // Fix SuiteCRM 8 "My Calls" dashlet explosion.
+
         $callBean->save();
         $response['id'] = $callBean->id;
 
@@ -64,6 +66,10 @@ switch ($action) {
             }
 
             $rel = $rel['list'][0];
+
+            $callBean->parent_type = $rel_config['module'];
+            $callBean->parent_id = $rel->id;
+            $callBean->save();
 
             if (!isset($rel_config['is_parent']) || !$rel_config['is_parent']) {
                 $callBean->load_relationship($rel_config['name']);

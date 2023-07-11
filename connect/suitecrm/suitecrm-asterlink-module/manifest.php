@@ -1,9 +1,9 @@
-<?php // serfreeman1337 // 15.06.21 //
+<?php // serfreeman1337 // 11.07.2023 //
 
 $manifest = [
     'name' => 'AsterLink',
     'description' => 'Asterisk PBX integration with SuiteCRM',
-    'version' => '0.4.0',
+    'version' => '0.5.0',
     'author' => 'serfreeman1337',
     'readme' => '',
     'acceptable_sugar_versions' => [
@@ -11,7 +11,7 @@ $manifest = [
     ],
     'icon' => '',
     'is_uninstallable' => true,
-    'published_date' => '2021-06-15',
+    'published_date' => '2023-07-11',
     'type' => 'module',
     'remove_tables' => 'prompt',
 ];
@@ -30,6 +30,10 @@ $installdefs = [
         [
             'from' => '<basepath>/custom/Extension/modules/Calls/Ext/Vardefs/AsterLink_Override_Calls_duration_hours.php',
             'to' => 'custom/Extension/modules/Calls/Ext/Vardefs/AsterLink_Override_Calls_duration_hours.php'
+        ],
+        [
+            'from' => '<basepath>/custom/Extension/application/Ext/Include/sf_asterlink.php',
+            'to' => 'custom/Extension/application/Ext/Include/sf_asterlink.php',
         ]
     ],
     'language' => [
@@ -134,3 +138,14 @@ $installdefs = [
 
 $upgrade_manifest = [];
  
+// SuiteCRM 8 support
+global $sugar_config;
+
+if (!empty($sugar_config) && strpos($sugar_config['suitecrm_version'], '8.') === 0) {
+    unset($installdefs['logic_hooks']);
+    $installdefs['copy'][] = [
+        'from' => '<basepath>/extensions/asterlink',
+        'to' => '../../extensions/asterlink',
+    ];
+    $installdefs['post_execute'][] = '<basepath>/patch_issue293.php';
+}

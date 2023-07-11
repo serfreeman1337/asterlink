@@ -1,0 +1,31 @@
+<div>
+    <scrm-image class="phone-icon sicon" image="phone"></scrm-image>
+    {{ did }}
+</div>
+
+<div class="call-info">
+    <a class="clickable" [routerLink]="id | recordLink:'calls'">
+        {{ (dir == 0 ? 'LBL_ASTERLINK_IN' : 'LBL_ASTERLINK_OUT') | appStrings }}
+    </a>
+    <span class="call-timer">{{ time | callDuration:isAnswered | async }}</span>
+</div>
+
+<div class="content">
+    <span>{{ (dir == 0 ? 'LBL_ASTERLINK_FROM' : 'LBL_ASTERLINK_TO') | appStrings }}</span>
+    <span>{{ cid }}</span>
+
+    <ng-container *ngFor="let rel of asterlinkService.relations | keyvalue">
+        <ng-container *ngIf="rel.value.show_create || (relations && relations[rel.key])">
+            <span>{{ rel.key | moduleName }}</span>
+
+            <a class="clickable" *ngIf="(relations && relations[rel.key]); else createLink" [routerLink]="relations[rel.key].id | recordLink:rel.key.toLowerCase()">
+                {{ relations[rel.key].name }}
+            </a>
+            <ng-template #createLink>
+                <a class="clickable" [routerLink]="['/'+rel.key.toLowerCase()+'/edit']" [queryParams]="cid | relQueryParam:rel.value.phone_field">
+                    {{ 'LBL_ASTERLINK_CREATE' | appStrings }}
+                </a>
+            </ng-template>
+        </ng-container>
+    </ng-container>
+</div>

@@ -1,11 +1,11 @@
-// serfreeman1337 // 10.07.2023 //
+// serfreeman1337 // 11.07.2023 //
 
 let ports = [];
 let currentUrl = undefined;
 let stream = undefined;
 let reconnectTimer = undefined;
 
-let calls = new Map();
+let calls = [];
 
 /**
  * Connect event stream.
@@ -29,13 +29,17 @@ function connect(url) {
 
   stream.onmessage = e => {
     const message = JSON.parse(e.data);
-    const id = message.data.id;
+    const id = calls.findIndex(call => call.id == message.data.id)
 
     // Remember active calls so they can be send back to the new open tabs.
     if (message.show) {
-      calls.set(id, message.data);
+      if (id == -1) {
+        calls.push(message.data)
+      } else {
+        Object.assign(calls[id], message.data);
+      }
     } else {
-      calls.delete(id);
+      calls.splice(id, 1);
     }
     
     // Notify all tabs about call.
@@ -57,9 +61,7 @@ function connect(url) {
  * Disconnect event stream.
  */
 function disconnect() {
-  for (const id of calls.keys()) { // Reset calls on disconnect.
-    calls.delete(id);
-  }
+  calls = []; // Reset calls on disconnect.e(id);
 
   for (const port of ports) { // Notify all tabs about disconnection.
     port.postMessage(false);
@@ -72,12 +74,10 @@ self.onconnect = e => {
   const port = e.ports[0];
   ports.push(port);
 
-
-
   port.onmessage = e => connect(e.data);
 
   // Send all active calls.
-  for (const call of calls.values()) {
+  for (const call of calls) {
     port.postMessage({ show: true, data: call });
   }
 };

@@ -1,0 +1,2 @@
+<?php
+$moduleList[] = 'AsterLink';

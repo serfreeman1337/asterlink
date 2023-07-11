@@ -1,0 +1,7 @@
+
+<a 
+    stopTelLink
+    [href]="field.value | telLink" 
+    (click)="originate(field.value)"
+>{{ field.value }}</a>
+<scrm-image *ngIf="isDialing" class="line-action sicon asterlink-loading" image="loading"></scrm-image>

@@ -1,0 +1,12 @@
+<asterlink-call-card 
+  *ngFor="let call of asterlinkService.calls" 
+  [isAnswered]="call.answered" 
+  [cid]="call.cid"
+  [did]="call.did"
+  [dir]="call.dir"
+  [id]="call.id"
+  [time]="call.time"
+  [relations]="call.relations"
+  @fade
+>
+</asterlink-call-card>
