@@ -6,6 +6,6 @@ $entry_point_registry['AsterLinkEntryPoint'] = [
 ];
 
 $entry_point_registry['AsterLink'] = [
-    'file' => 'modules/AsterLink/AsterLinkResource.php',
+    'file' => 'modules/AsterLink/AsterLinkEndPoint.php',
     'auth' => true,
 ];

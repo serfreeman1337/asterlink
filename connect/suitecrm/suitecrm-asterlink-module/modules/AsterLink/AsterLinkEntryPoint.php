@@ -47,8 +47,11 @@ switch ($action) {
         $callBean->save();
         $response['id'] = $callBean->id;
 
-        if (!isset($config['relationships']))
-            return false;
+        http_response_code(201);
+
+        if (empty($config['relationships'])) {
+            break;
+        }
 
         foreach ($config['relationships'] as $rel_config) {
             $module_t = strtolower($rel_config['module']);
@@ -93,8 +96,6 @@ switch ($action) {
             if (isset($config['relate_once']) && $config['relate_once'])
                 break;
         }
-
-        http_response_code(201);
     break;
     case 'update_call_record':
         $callBean = BeanFactory::getBean('Calls', $_POST['id']);
@@ -107,8 +108,11 @@ switch ($action) {
         $callBean->save();
     break;
     case 'get_relations':
-        if (!isset($config['relationships']))
+        $response = [];
+        
+        if (empty($config['relationships'])) {
             break;
+        }
 
         $callBean = BeanFactory::getBean('Calls', $_POST['id']);
 

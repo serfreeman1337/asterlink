@@ -9,8 +9,7 @@ class AsterLinkController extends SugarController
 
     public function action_save()
     {
-        global $sugar_config;
-        global $current_user;
+        global $sugar_config, $sugar_version, $current_user;
         
         if (!is_admin($current_user)
             && !is_admin_for_module($GLOBALS['current_user'], 'Emails')
@@ -79,17 +78,16 @@ class AsterLinkController extends SugarController
         if (isset($_POST['proxy_enabled'])) {
             $sugar_config['asterlink']['proxy_enabled'] = true;
         } else {
-            $sugar_config['asterlink']['proxy_enabled'] = [];
+            unset($sugar_config['asterlink']['proxy_enabled']);
         }
 
         if (isset($_POST['relate_once'])) {
             $sugar_config['asterlink']['relate_once'] = true;
         } else {
-            $sugar_config['asterlink']['relate_once'] = [];
+            unset($sugar_config['asterlink']['relate_once']);
         }
 
-        // set to empty array, will be removed if left empty
-        $sugar_config['asterlink']['relationships'] = [];
+        unset($sugar_config['asterlink']['relationships']);
 
         if (isset($_POST['rel'])) {
             require_once('modules/ModuleBuilder/parsers/relationships/DeployedRelationships.php');
@@ -97,6 +95,9 @@ class AsterLinkController extends SugarController
             
             foreach ($_POST['rel'] as $i => $relationshipName) {
                 $rel = $relationships->get($relationshipName)->getDefinition();
+
+                if (!isset($sugar_config['asterlink']['relationships']))
+                    $sugar_config['asterlink']['relationships'] = [];
 
                 $sugar_config['asterlink']['relationships'][] = [
                     'rel_name' => $relationshipName,

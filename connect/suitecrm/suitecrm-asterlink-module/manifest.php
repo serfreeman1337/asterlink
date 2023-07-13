@@ -136,7 +136,35 @@ $installdefs = [
     ]
 ];
 
-$upgrade_manifest = [];
+$upgrade_manifest = [
+    'upgrade_paths' => [
+        '0.4.0' => [
+            'id' => 'sf_asterlink',
+            'copy' => [
+                [ 'from' => '<basepath>/custom/Extension/application/Ext/EntryPointRegistry/AsterLinkEntryPoint.php', 'to' => 'custom/Extension/application/Ext/EntryPointRegistry/AsterLinkEntryPoint.php' ],
+                [ 'from' => '<basepath>/custom/Extension/application/Ext/Include/sf_asterlink.php', 'to' => 'custom/Extension/application/Ext/Include/sf_asterlink.php' ],
+                [ 'from' => '<basepath>/modules/AsterLink/AsterLinkHook.php', 'to' => 'modules/AsterLink/AsterLinkHook.php' ],
+                [ 'from' => '<basepath>/modules/AsterLink/AsterLinkEntryPoint.php', 'to' => 'modules/AsterLink/AsterLinkEntryPoint.php' ],
+                [ 'from' => '<basepath>/modules/AsterLink/AsterLinkEndPoint.php', 'to' => 'modules/AsterLink/AsterLinkEndPoint.php' ],
+                [ 'from' => '<basepath>/modules/AsterLink/controller.php', 'to' => 'modules/AsterLink/controller.php' ],
+                [ 'from' => '<basepath>/modules/AsterLink/utils.php', 'to' => 'modules/AsterLink/utils.php' ],
+                [ 'from' => '<basepath>/modules/AsterLink/language/en_us.lang.php', 'to' => 'modules/AsterLink/language/en_us.lang.php' ],
+                [ 'from' => '<basepath>/modules/AsterLink/language/ru_RU.lang.php', 'to' => 'modules/AsterLink/language/ru_RU.lang.php' ],
+                [ 'from' => '<basepath>/modules/AsterLink/views/view.config.php', 'to' => 'modules/AsterLink/views/view.config.php' ],
+                [ 'from' => '<basepath>/modules/AsterLink/tpls/config.tpl', 'to' => 'modules/AsterLink/tpls/config.tpl' ],
+                [ 'from' => '<basepath>/modules/AsterLink/javascript/asterlink.js', 'to' => 'modules/AsterLink/javascript/asterlink.js' ],
+                [ 'from' => '<basepath>/modules/AsterLink/javascript/asterlink.worker.js', 'to' => 'modules/AsterLink/javascript/asterlink.worker.js' ]
+            ],
+            'language' => [
+                [ 'from' => '<basepath>/custom/Extension/application/Ext/Language/en_us.AsterLink.php', 'to_module' => 'application', 'language' => 'en_us' ],
+                [ 'from' => '<basepath>/custom/Extension/application/Ext/Language/ru_RU.AsterLink.php', 'to_module' => 'application', 'language' => 'ru_RU' ]
+            ],
+            'post_execute' => [
+                '<basepath>/post_execute_040_to_050.php'
+            ],
+        ]
+    ]
+];
  
 // SuiteCRM 8 support
 global $sugar_config;
@@ -147,4 +175,46 @@ if (!empty($sugar_config) && strpos($sugar_config['suitecrm_version'], '8.') ===
         'from' => '<basepath>/extensions/asterlink',
         'to' => '../../extensions/asterlink',
     ];
+
+    foreach ($upgrade_manifest['upgrade_paths'] as $ver => &$data) {
+        $data['copy'][] = [
+            'from' => '<basepath>/extensions/asterlink',
+            'to' => '../../extensions/asterlink',
+        ];
+    }
+}
+
+// SuiteCRM module upgrade with zero major version hack. I mean... literally.
+if (!empty($_REQUEST['action']) && $_REQUEST['action'] == 'UpgradeWizard_prepare') {
+    $uh = new UpgradeHistory();
+    $result = $uh->db->query('SELECT id, version FROM '. $uh->table_name . ' WHERE id_name = \'sf_asterlink\' ORDER BY date_entered DESC');
+
+    if (!empty($result)) {
+        $temp_version = 0;
+        $id = '';
+
+        while ($row = $uh->db->fetchByAssoc($result)) {
+            $row['version'] = substr($row['version'], 2); // Strip leading "0." major version and continue check.
+
+            if (!$uh->is_right_version_greater(explode('.', $row['version']), explode('.', $temp_version))) {
+                $temp_version = $row['version'];
+                $id = $row['id'];
+            }
+        }
+
+        if ($temp_version) {
+            $temp_version = '0.'.$temp_version; // Bring leading "0." back.
+            $manifest['description'] = "lol kek cheburek, what is this\"/>
+<script>
+    $(document).ready(() => {
+        $('[name=previous_version]').val('$temp_version');
+        $('[name=previous_id]').val('$id');
+        $('[name=description]').val('${manifest['description']}');
+        $('#why').remove();
+    });
+</script><input id=why type=hidden ";
+        }
+
+
+    }
 }

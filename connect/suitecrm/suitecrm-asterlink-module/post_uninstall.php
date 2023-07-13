@@ -1,8 +1,8 @@
-<?php // serfreeman1337 // 15.06.21 //
+<?php // serfreeman1337 // 13.07.2023 //
 
 $clean_config = loadCleanConfig();
 unset($clean_config['asterlink']);
-rebuildConfigFile($clean_config, $sugar_version);
+rebuildConfigFile($clean_config, $clean_config['sugar_version']);
 
 // remove "Asterisk Extension" field from Users module
 require_once 'modules/ModuleBuilder/parsers/ParserFactory.php';

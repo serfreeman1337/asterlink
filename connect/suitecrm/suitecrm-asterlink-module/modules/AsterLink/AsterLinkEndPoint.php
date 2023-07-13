@@ -57,13 +57,16 @@ switch ($_REQUEST['action']) {
         header('Cache-Control: no-cache');
         header('X-Accel-Buffering: no');
 
+        ob_implicit_flush(true);
+        ob_end_flush();
+
         $ch = curl_init();
         curl_setopt_array($ch, [
             CURLOPT_URL => $url,
             CURLOPT_WRITEFUNCTION => function($ch, $data) {
                 // Echo and then flush everything.
                 echo $data;
-                ob_end_flush();
+                ob_flush();
                 flush();
                 return strlen($data);
             },
@@ -78,7 +81,7 @@ switch ($_REQUEST['action']) {
         do {
             // PHP needs to send something in order to detect client disconnect.
             echo "\r";
-            ob_end_flush();
+            ob_flush();
             flush();
 
             if (connection_aborted())
@@ -103,16 +106,16 @@ switch ($_REQUEST['action']) {
             $response['endpoint_url'] = $config['endpoint_url'];
         }
 
-        $relations = [];
+        if (!empty($config['relationships'])) {
+            $relations = [];
+    
+            foreach ($config['relationships'] as $rel_config) {
+                $relations[$rel_config['module']] = [
+                    'show_create' => $rel_config['show_create'],
+                    'phone_field' => $rel_config['phone_fields'][0]
+                ];
+            }
 
-        foreach ($config['relationships'] as $rel_config) {
-            $relations[$rel_config['module']] = [
-                'show_create' => $rel_config['show_create'],
-                'phone_field' => $rel_config['phone_fields'][0]
-            ];
-        }
-
-        if (count($relations)) {
             $response['relations'] = $relations;
         }
 
