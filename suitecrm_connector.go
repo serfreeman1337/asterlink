@@ -1,11 +1,10 @@
-//go:build !b24
-
 package main
 
 import (
+	"gopkg.in/yaml.v3"
+
 	"github.com/serfreeman1337/asterlink/connect"
 	"github.com/serfreeman1337/asterlink/connect/suitecrm"
-	"gopkg.in/yaml.v2"
 )
 
 func init() {
@@ -25,6 +24,6 @@ func newSuiteCRMConnector(cfgBytes []byte) (connecter connect.Connecter, err err
 		return
 	}
 
-	connecter = suitecrm.NewSuiteCRMConnector(&config.SuiteCRM)
+	connecter = suitecrm.New(&config.SuiteCRM)
 	return
 }

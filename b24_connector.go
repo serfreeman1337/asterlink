@@ -1,13 +1,12 @@
-//go:build !suitecrm
-
 package main
 
 import (
 	"regexp"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/serfreeman1337/asterlink/connect"
 	"github.com/serfreeman1337/asterlink/connect/b24"
-	"gopkg.in/yaml.v2"
 )
 
 func init() {
@@ -36,6 +35,6 @@ func newB24Connector(cfgBytes []byte) (connecter connect.Connecter, err error) {
 		config.B24.HasFindForm = true
 	}
 
-	connecter = b24.NewB24Connector(&config.B24)
+	connecter = b24.New(&config.B24)
 	return
 }

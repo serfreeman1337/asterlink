@@ -64,8 +64,8 @@ func (s *suitecrm) SetOriginate(orig connect.OrigFunc) {
 	s.originate = orig
 }
 
-// NewSuiteCRMConnector func
-func NewSuiteCRMConnector(cfg *Config) connect.Connecter {
+// New func
+func New(cfg *Config) connect.Connecter {
 	s := &suitecrm{
 		cfg:    cfg,
 		log:    log.WithField("suite", true),

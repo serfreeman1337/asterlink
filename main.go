@@ -1,14 +1,12 @@
 package main
 
 import (
-	"io/ioutil"
 	"os"
 
-	"github.com/serfreeman1337/asterlink/connect"
-
-	"gopkg.in/yaml.v2"
-
 	log "github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v3"
+
+	"github.com/serfreeman1337/asterlink/connect"
 )
 
 type newConnectorFunc func([]byte) (connect.Connecter, error)
@@ -24,7 +22,7 @@ func main() {
 	var amiCfg AmiConfig
 	var connector connect.Connecter
 
-	if cfgBytes, err := ioutil.ReadFile("conf.yml"); err == nil {
+	if cfgBytes, err := os.ReadFile("conf.yml"); err == nil {
 		var config struct {
 			LogLevel log.Level `yaml:"log_level"`
 		}

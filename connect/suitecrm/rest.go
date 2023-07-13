@@ -7,8 +7,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/serfreeman1337/asterlink/connect"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/serfreeman1337/asterlink/connect"
 )
 
 // type contact struct {

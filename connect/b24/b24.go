@@ -6,8 +6,9 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/serfreeman1337/asterlink/connect"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/serfreeman1337/asterlink/connect"
 )
 
 // Config struct
@@ -57,8 +58,8 @@ func (b *b24) SetOriginate(orig connect.OrigFunc) {
 	b.originate = orig
 }
 
-// NewB24Connector connector
-func NewB24Connector(cfg *Config) connect.Connecter {
+// New connector
+func New(cfg *Config) connect.Connecter {
 	client := http.Client{
 		Timeout: time.Second * 30,
 	}

@@ -5,8 +5,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/serfreeman1337/asterlink/connect"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/serfreeman1337/asterlink/connect"
 )
 
 func (b *b24) OrigStart(c *connect.Call, oID string) {
