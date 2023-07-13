@@ -1,4 +1,4 @@
-<?php // serfreeman1337 // 15.06.21 //
+<?php // serfreeman1337 // 13.07.2023 //
 
 class AsterLinkController extends SugarController
 {
@@ -63,15 +63,23 @@ class AsterLinkController extends SugarController
         }
 
         if (isset($_POST['endpoint_token'])) {
-            $sugar_config['asterlink']['endpoint_token'] = $_POST['endpoint_token'];
+            $sugar_config['asterlink']['endpoint_token'] = trim($_POST['endpoint_token']);
         } else {
             unset($sugar_config['asterlink']['endpoint_token']);
         }
 
         if (isset($_POST['endpoint_url'])) {
-            $sugar_config['asterlink']['endpoint_url'] = $_POST['endpoint_url'];
+            $url = trim($_POST['endpoint_url']);
+            $url = rtrim($url, '/');
+            $sugar_config['asterlink']['endpoint_url'] = $url;
         } else {
             unset($sugar_config['asterlink']['endpoint_url']);
+        }
+
+        if (isset($_POST['proxy_enabled'])) {
+            $sugar_config['asterlink']['proxy_enabled'] = true;
+        } else {
+            $sugar_config['asterlink']['proxy_enabled'] = [];
         }
 
         if (isset($_POST['relate_once'])) {

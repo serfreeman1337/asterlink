@@ -37,10 +37,10 @@ func (s *suitecrm) Init() {
 	if s.cfg.EndpointAddr != "" {
 		http.HandleFunc("/assigned/", s.assignedHandler)
 
-		http.Handle("/originate/", s.tokenMiddleware(http.HandlerFunc(s.originateHandler)))
+		http.Handle("/originate", s.tokenMiddleware(http.HandlerFunc(s.originateHandler)))
 
 		s.streams = make(streamsMap)
-		http.Handle("/stream/", s.tokenMiddleware(http.HandlerFunc(s.streamHandler)))
+		http.Handle("/stream", s.tokenMiddleware(http.HandlerFunc(s.streamHandler)))
 
 		go func() {
 			s.log.WithField("addr", s.cfg.EndpointAddr).Info("Enabling web server")

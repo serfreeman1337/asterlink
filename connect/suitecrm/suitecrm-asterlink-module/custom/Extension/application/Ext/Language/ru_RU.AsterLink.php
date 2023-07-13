@@ -1,4 +1,4 @@
-<?php // serfreeman1337 // 15.06.21 //
+<?php // serfreeman1337 // 11.07.2023 //
 
 $app_strings['LBL_ASTERLINK_IN'] = 'Входящий звонок';
 $app_strings['LBL_ASTERLINK_FROM'] = 'С номера';

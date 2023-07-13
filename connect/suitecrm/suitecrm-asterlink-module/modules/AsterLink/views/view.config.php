@@ -121,6 +121,9 @@ class ViewConfig extends SugarView
             
             if (isset($sugar_config['asterlink']['endpoint_url']))
                 $this->ss->assign("ENDPOINT_URL", $sugar_config['asterlink']['endpoint_url']);
+
+            if (isset($sugar_config['asterlink']['proxy_enabled']))
+                $this->ss->assign("PROXY_ENABLED", $sugar_config['asterlink']['proxy_enabled']);
     
             if (isset($sugar_config['asterlink']['relate_once']) && $sugar_config['asterlink']['relate_once'])
                 $this->ss->assign('RELATE_ONCE', true);

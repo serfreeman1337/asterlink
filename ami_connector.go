@@ -57,6 +57,10 @@ func (a *amiConnector) Init() {
 }
 
 func (a *amiConnector) Originate(ext string, dest string, oID string) {
+	ext = strings.TrimSpace(strings.ReplaceAll(ext, "\n", ""))
+	dest = strings.TrimSpace(strings.ReplaceAll(dest, "\n", ""))
+	oID = strings.TrimSpace(strings.ReplaceAll(oID, "\n", ""))
+
 	cLog := log.WithFields(log.Fields{"ext": ext, "dest": dest, "oID": oID})
 	num, ok := a.formatNum(dest, false)
 

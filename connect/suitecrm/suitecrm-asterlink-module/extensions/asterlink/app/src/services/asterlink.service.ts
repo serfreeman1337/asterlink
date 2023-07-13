@@ -49,7 +49,7 @@ export class AsterlinkService implements OnDestroy {
     }
 
     private onLogin() {
-        const url = 'api/asterlink';
+        const url = '?entryPoint=AsterLink';
         this.http.get(url, {
             headers: new HttpHeaders({
                 'Accept': 'application/json'
@@ -57,8 +57,15 @@ export class AsterlinkService implements OnDestroy {
             withCredentials: true
         }).subscribe((r: any) => {
             if (r) {
-                this.token = r.token;
-                this.endpointUrl = r.endpoint_url;
+                if (r.token) {
+                    this.token = r.token;
+                    this.endpointUrl = r.endpoint_url + '/';
+                } else {
+                    this.endpointUrl = location.protocol + '//' + 
+                            location.hostname + 
+                            (location.port ? ':' + location.port : '' ) +
+                            location.pathname + url + '&action=';
+                }
 
                 this.connectEvents();
                 
@@ -113,23 +120,27 @@ export class AsterlinkService implements OnDestroy {
                 }
             });
         };
-        
-        this.worker.port.postMessage(this.endpointUrl + '/stream?token=' + this.token);
+
+        let url = this.endpointUrl + 'stream';
+
+        if (this.token) {
+            url += '?token=' + this.token;
+        }
+
+        this.worker.port.postMessage(url);
     }
 
     originate(phone: string) {
-        if (!this.token) {
-            return throwError('unable to get asterlink token');
-        }
-
         const data = new URLSearchParams({ phone });
 
-        return this.http.post(this.endpointUrl + '/originate/', data, {
-            headers: new HttpHeaders({
-                'X-Asterlink-Token': this.token,
-                'Content-Type': 'application/x-www-form-urlencoded'
-            }),
-
+        let headers = new HttpHeaders({
+            'Content-Type': 'application/x-www-form-urlencoded'
         });
+
+        if (this.token) {
+            headers = headers.append('X-Asterlink-Token', this.token);
+        }
+
+        return this.http.post(this.endpointUrl + 'originate', data, { headers });
     }
 }

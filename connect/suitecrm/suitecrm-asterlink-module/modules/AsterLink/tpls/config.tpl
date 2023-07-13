@@ -51,6 +51,15 @@
 								<input name="endpoint_url" tabindex="1" maxlength="128" type="text" placeholder="http://localhost:5678" value="{$ENDPOINT_URL}" style="width: 40%;">
 							</td>
 						</tr>
+						<tr>
+							<td width="15%" scope="row">
+								{$MOD.LBL_CONFIG_PROXY}
+								{sugar_help text=$MOD.LBL_CONFIG_PROXY_TT}
+							</td>
+							<td style="padding: 8px 0;">
+								<input name="proxy_enabled" type="checkbox" value="true" {if $PROXY_ENABLED}checked{/if}/>
+							</td>
+						</tr>
 					</table>
 				</div>
 			</div>

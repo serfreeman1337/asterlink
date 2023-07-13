@@ -1,18 +1,18 @@
-<?php // serfreeman1337 // 11.07.2023 //
+<?php // serfreeman1337 // 13.07.2023 //
 
 if(!defined('sugarEntry') || !sugarEntry) die('Not A Valid Entry Point');
 
-global $sugar_config;
+require_once('modules/AsterLink/utils.php');
 
 if (!isset($_SERVER['HTTP_X_ASTERLINK_TOKEN']) || 
     !isset($_REQUEST['action']) ||
-    empty($sugar_config['asterlink']['endpoint_token'])
+    !($config = getConfig())
 ) {
     http_response_code(400);
     die();
 }
 
-if ($_SERVER['HTTP_X_ASTERLINK_TOKEN'] != $sugar_config['asterlink']['endpoint_token']) {
+if ($_SERVER['HTTP_X_ASTERLINK_TOKEN'] != $config['endpoint_token']) {
     sleep(5);
     http_response_code(403);
     die();
@@ -47,10 +47,10 @@ switch ($action) {
         $callBean->save();
         $response['id'] = $callBean->id;
 
-        if (!isset($sugar_config['asterlink']['relationships']))
+        if (!isset($config['relationships']))
             return false;
 
-        foreach ($sugar_config['asterlink']['relationships'] as $rel_config) {
+        foreach ($config['relationships'] as $rel_config) {
             $module_t = strtolower($rel_config['module']);
 
             $fields = [];
@@ -90,7 +90,7 @@ switch ($action) {
                 'assigned_user_id' => $rel->assigned_user_id
             ];
 
-            if (isset($sugar_config['asterlink']['relate_once']) && $sugar_config['asterlink']['relate_once'])
+            if (isset($config['relate_once']) && $config['relate_once'])
                 break;
         }
 
@@ -107,14 +107,12 @@ switch ($action) {
         $callBean->save();
     break;
     case 'get_relations':
-        if (!isset($sugar_config['asterlink']['relationships']))
+        if (!isset($config['relationships']))
             break;
-
-        global $sugar_config;
 
         $callBean = BeanFactory::getBean('Calls', $_POST['id']);
 
-        foreach ($sugar_config['asterlink']['relationships'] as $rel_config) {
+        foreach ($config['relationships'] as $rel_config) {
             // parent module special
             if (isset($rel_config['is_parent']) && $rel_config['is_parent']) {
                 if (!empty($callBean->parent_id) && $callBean->parent_type == $rel_config['module']) {

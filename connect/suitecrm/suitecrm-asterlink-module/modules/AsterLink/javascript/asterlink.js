@@ -13,15 +13,19 @@ function alInitFields() {
               '...</span>'
           );
 
+          let headers = {}
+
+          if (typeof ASTERLINK_TOKEN != 'undefined') {
+            headers['X-Asterlink-Token'] = ASTERLINK_TOKEN;
+          }
+
           $.ajax({
-            url: ASTERLINK_URL+'/originate/',
+            url: ASTERLINK_URL+'originate',
             type: 'post',
             data: {
               phone: a.text()
             },
-            headers: {
-              'X-Asterlink-Token': ASTERLINK_TOKEN,
-            },
+            headers,
             success: () => {
               a.parent().find('.al-rogress').remove();
             }
@@ -188,7 +192,7 @@ class AlCallCard {
 
 const alCalls = new Map();
 
-const alWorker = new SharedWorker(ASTERLINK_WORKER);
+const alWorker = new SharedWorker('modules/AsterLink/javascript/asterlink.worker.js');
 
 alWorker.port.onmessage = e => {
   if (!e.data) { // Worker disconnected from stream.
@@ -219,4 +223,9 @@ alWorker.port.onmessage = e => {
   }
 };
 
-alWorker.port.postMessage(ASTERLINK_STREAM);
+alWorker.port.postMessage(ASTERLINK_URL + 'stream' + 
+    (typeof ASTERLINK_TOKEN != 'undefined' ? 
+        '?token=' + ASTERLINK_TOKEN :
+        ''
+    )
+);

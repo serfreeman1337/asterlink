@@ -11,7 +11,7 @@ $manifest = [
     ],
     'icon' => '',
     'is_uninstallable' => true,
-    'published_date' => '2023-07-11',
+    'published_date' => '2023-07-13',
     'type' => 'module',
     'remove_tables' => 'prompt',
 ];
@@ -147,5 +147,4 @@ if (!empty($sugar_config) && strpos($sugar_config['suitecrm_version'], '8.') ===
         'from' => '<basepath>/extensions/asterlink',
         'to' => '../../extensions/asterlink',
     ];
-    $installdefs['post_execute'][] = '<basepath>/patch_issue293.php';
 }

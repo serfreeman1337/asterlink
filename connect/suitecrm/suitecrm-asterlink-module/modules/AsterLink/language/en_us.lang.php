@@ -7,7 +7,10 @@ $mod_strings = [
     'LBL_CONFIG_TOKEN_TT' => 'It must be equal with the one in conf.yml file.',
 
     'LBL_CONFIG_URL' => 'Endpoint URL',
-    'LBL_CONFIG_URL_TT' => 'User\\\'s browser will send request to this URL for click-2-call and pop up card.',
+    'LBL_CONFIG_URL_TT' => 'The AsterLink\'s address. Browser will send request to this URL for click-2-call and pop up card.',
+
+    'LBL_CONFIG_PROXY' => 'Enable proxy',
+    'LBL_CONFIG_PROXY_TT' => 'Proxy requests to the endpoint throught SuiteCRM itself.',
 
     'LBL_CONFIG_RELS' => 'Relationships Settings',
 
