@@ -4,13 +4,13 @@ Supports FreePBX v14 integration with [Bitrix24](https://github.com/serfreeman13
 
 # Asterisk
 You need Asterisk 13+.  
-To monitor how call is going this connector listens for AMI events.
+To monitor calls this connector listens for AMI events.
 
 There should be 4 **different** contexts to distinguish calls:
-* `incoming_context` - context for incoming calls from voip trunk. inbound calls will be registred there
-* `outgoing_context` - context for outgoing calls. outbound calls will be registred there
-* `ext_context` - extensions dials from queue, ring group, etc. use this context to route incoming calls to your extensions
-* `dial_context` - context for originating (click2dial) calls
+* `incoming_context` - context for incoming calls from voip trunk. inbound calls will be registred there.
+* `outgoing_context` - context for outgoing calls. outbound calls will be registred there.
+* `ext_context` - extensions dials from queue, ring group, etc. use this context to route incoming calls to your extensions.
+* `dial_context` - context for originating (click2dial) calls.
 
 Default configuration is tested to work with FreePBX v14 and Asterisk v13.
 
@@ -32,50 +32,50 @@ You see `DCS-Incoming` in `ext_context` because we are dialing **queue** extensi
 ## CallerID Format
 Connector can format CallerID using regexp. This useful when your VoIP provider doesn't send desired format. 
 
-* `cid_format` - from PBX to CRM
-* `dial_format` - from CRM to PBX
-  * `expr` - regual expression (use double blackslashes)
-  * `repl` - replace pattern
+* `cid_format` - from PBX to CRM.
+* `dial_format` - from CRM to PBX.
+  * `expr` - regual expression (use double blackslashes).
+  * `repl` - replace pattern.
 
 If config is set and callerid doesn't matched any of regexp, then call will be ignored.
 
 # CRM Integration
 See instructions in the following files:
-* [README_bitrix24.md](https://github.com/serfreeman1337/asterlink/blob/master/README_bitrix24.md) - For [Bitrix24](https://www.bitrix24.com/) Integration
-* [README_suitecrm.md](https://github.com/serfreeman1337/asterlink/blob/master/README_suitecrm.md) - For [SuiteCRM](https://suitecrm.com/) Integration
+* [README_bitrix24.md](https://github.com/serfreeman1337/asterlink/blob/master/README_bitrix24.md) - For [Bitrix24](https://www.bitrix24.com/) Integration.
+* [README_suitecrm.md](https://github.com/serfreeman1337/asterlink/blob/master/README_suitecrm.md) - For [SuiteCRM](https://suitecrm.com/) Integration.
 
 # Install
 Install asterlink under **/opt/asterlink** folder.
-* Create folder /opt/asterlink
+* Create folder /opt/asterlink:
   ```bash
   mkdir /opt/asterlink; cd /opt/asterlink
   ```
-* Download binary from releases page
+* Download binary from releases page:
   ```bash
   wget https://github.com/serfreeman1337/asterlink/releases/latest/download/asterlink_x86_64.tar.gz
   tar xvf asterlink_x86_64.tar.gz && rm asterlink_x86_64.tar.gz
   chmod +x asterlink
   ```
-  * Or build it from source (assume you have go installed)
-  ```bash
-  go get github.com/serfreeman1337/asterlink
-  go build github.com/serfreeman1337/asterlink
-  ```
-* Create configuration file. Use conf.example.yml as example.
+  * Or build it from source (assume you have [go installed](https://go.dev/doc/install)):
+    ```bash
+    go get github.com/serfreeman1337/asterlink
+    go build github.com/serfreeman1337/asterlink
+    ```
+* Create configuration file. Use `conf.example.yml` as an example.
   ```bash
   wget https://raw.githubusercontent.com/serfreeman1337/asterlink/master/conf.example.yml
   mv conf.example.yml conf.yml
   nano conf.yml
   ```
-  Note: config file is using YAML format and <ins>it requires to have proper indentation</ins>.  
+  **Note:** config file is using YAML format and <ins>it requires to have proper indentation</ins>.  
   Use online yaml validator to check your file for errors.
-* Test run
+* Test run:
   ```bash
   ./asterlink
   ```
 
 ## Startup script example
-Create **/etc/systemd/system/asterlink.service** file with following contents:
+Create `/etc/systemd/system/asterlink.service` file with following contents:
 ```
 [Unit]
 Description=AsterLink Connector

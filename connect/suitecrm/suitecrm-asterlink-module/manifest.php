@@ -1,4 +1,4 @@
-<?php // serfreeman1337 // 11.07.2023 //
+<?php // serfreeman1337 // 14.07.2023 //
 
 $manifest = [
     'name' => 'AsterLink',
@@ -11,7 +11,7 @@ $manifest = [
     ],
     'icon' => '',
     'is_uninstallable' => true,
-    'published_date' => '2023-07-13',
+    'published_date' => '2023-07-14',
     'type' => 'module',
     'remove_tables' => 'prompt',
 ];
