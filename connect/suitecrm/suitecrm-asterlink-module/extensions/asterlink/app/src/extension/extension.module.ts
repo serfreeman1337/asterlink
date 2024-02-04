@@ -1,4 +1,4 @@
-import { NgModule, ComponentFactoryResolver, ApplicationRef, Injector, ComponentRef, EmbeddedViewRef } from '@angular/core';
+import { NgModule, ApplicationRef, ComponentRef, EmbeddedViewRef, createComponent } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { takeWhile } from 'rxjs/operators';
@@ -46,11 +46,9 @@ export class ExtensionModule {
 
     constructor(
         private fieldRegistry: FieldRegistry,
-        private componentFactoryResolver: ComponentFactoryResolver,
         private appRef: ApplicationRef,
-        private injector: Injector,
         private asterlinkService: AsterlinkService,
-        private appStateStore: AppStateStore,
+        private appStateStore: AppStateStore
     ) {
         // Override phone fields.
         this.fieldRegistry.register('default', 'phone', 'list', PhoneFieldComponent);
@@ -69,12 +67,10 @@ export class ExtensionModule {
     init() {
         this.asterlinkService.ready$.subscribe(v => {
             if (v) { // Attach asterlink to the body.
-                this.componentRef = this.componentFactoryResolver
-                        .resolveComponentFactory(AsterLinkComponent)
-                        .create(this.injector);
+                this.componentRef = createComponent(AsterLinkComponent, { environmentInjector: this.appRef.injector });
                 this.appRef.attachView(this.componentRef.hostView);
                 const domElem = (this.componentRef.hostView as EmbeddedViewRef<any>).rootNodes[0] as HTMLElement;
-                document.body.appendChild(domElem);
+                document.getElementsByTagName('app-root')[0].appendChild(domElem);
             } else {
                 if (this.componentRef) {
                     this.appRef.detachView(this.componentRef.hostView);

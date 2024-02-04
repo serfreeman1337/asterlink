@@ -6,7 +6,7 @@ Features:
 * Forwarding calls to assigned user.
 
 ##  Install
-**For SuiteCRM 8 minimum working version is 8.2.0!**
+**For SuiteCRM 8 minimum working version is 8.5.0!**
 * [Install and configure asterlink service](https://github.com/serfreeman1337/asterlink/blob/master/README.md) first.
 * Uncomment `suitecrm` entry in `conf.yml` file and set:
   * `url` - SuiteCRM site address.
@@ -15,7 +15,7 @@ Features:
   **Note:** config file is using YAML format and it requires to have proper indentation.  
   Use online yaml validator to check your file for errors.
 * Download [suitecrm-asterlink-module.zip](https://github.com/serfreeman1337/asterlink/releases/latest/download/suitecrm-asterlink-module.zip) archive from the [releases page](https://github.com/serfreeman1337/asterlink/releases).  
-  **SuiteCRM 8:** Extension in the module archive was built with the `8.2.0` version and tested to work with the `8.3.1`.
+  **SuiteCRM 8:** Extension in the module archive was built and tested to work with the `8.5.0` version.
 * Upload and install this module using **Module Loader** on the SuiteCRM Admin page.
 * On the SuiteCRM Admin page open **AsterLink Connector** module settings and set:
   * `Token` - to `endpoint_token` value in the `conf.yml` file.

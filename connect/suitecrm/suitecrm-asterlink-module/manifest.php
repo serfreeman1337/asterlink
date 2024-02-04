@@ -1,9 +1,9 @@
-<?php // serfreeman1337 // 14.07.2023 //
+<?php
 
 $manifest = [
     'name' => 'AsterLink',
     'description' => 'Asterisk PBX integration with SuiteCRM',
-    'version' => '0.5.0',
+    'version' => '0.5.1',
     'author' => 'serfreeman1337',
     'readme' => '',
     'acceptable_sugar_versions' => [
@@ -11,7 +11,7 @@ $manifest = [
     ],
     'icon' => '',
     'is_uninstallable' => true,
-    'published_date' => '2023-07-14',
+    'published_date' => '2024-02-04',
     'type' => 'module',
     'remove_tables' => 'prompt',
 ];

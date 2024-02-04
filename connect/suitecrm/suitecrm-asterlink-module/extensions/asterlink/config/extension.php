@@ -10,13 +10,13 @@ if (!isset($container)) {
 $extensions = $container->getParameter('extensions') ?? [];
 
 $extensions['asterlink'] = [
-    'remoteEntry' => './extensions/asterlink/remoteEntry.js',
+    'remoteEntry' => '../extensions/asterlink/remoteEntry.js',
     'remoteName' => 'asterlink',
     'enabled' => true,
     'extension_name' => 'AsterLink',
     'extension_uri' =>  'https://github.com/serfreeman1337/asterlink',
     'description' => 'Asterisk PBX integration with SuiteCRM',
-    'version' =>  '0.5.0',
+    'version' =>  '0.5.1',
     'author' =>  'serfreeman1337',
     'author_uri' =>  'https://github.com/serfreeman1337',
     'license' =>  'MIT'

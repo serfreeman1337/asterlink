@@ -1,7 +1,6 @@
 import { Component} from '@angular/core';
-import { BaseFieldComponent, DataTypeFormatter, FieldLogicManager, LanguageStore, MessageService } from 'core';
+import { BaseFieldComponent, DataTypeFormatter, FieldLogicDisplayManager, FieldLogicManager, LanguageStore, MessageService } from 'core';
 import { AsterlinkService } from '../../services/asterlink.service';
-import { Field } from 'common';
 
 @Component({
     selector: 'asterlink-phone-field',
@@ -14,11 +13,12 @@ export class PhoneFieldComponent extends BaseFieldComponent  {
     constructor(
         protected typeFormatter: DataTypeFormatter, 
         protected logic: FieldLogicManager,
+        protected logicDisplay: FieldLogicDisplayManager,
         private asterlinkService: AsterlinkService,
         private messageService: MessageService,
         private languageStore: LanguageStore
     ) {
-        super(typeFormatter, logic);
+        super(typeFormatter, logic, logicDisplay);
     }
 
     originate(phone: string) {

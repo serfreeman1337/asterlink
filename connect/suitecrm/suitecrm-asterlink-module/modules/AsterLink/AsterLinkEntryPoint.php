@@ -1,4 +1,4 @@
-<?php // serfreeman1337 // 13.07.2023 //
+<?php
 
 if(!defined('sugarEntry') || !sugarEntry) die('Not A Valid Entry Point');
 
@@ -64,7 +64,7 @@ switch ($action) {
 
             $rel = BeanFactory::getBean($rel_config['module'])->get_list("", implode(' OR ', $fields), 0, 1);
             
-            if (!$rel['row_count']) {
+            if (!count($rel['list'])) {
                 continue;
             }
 
