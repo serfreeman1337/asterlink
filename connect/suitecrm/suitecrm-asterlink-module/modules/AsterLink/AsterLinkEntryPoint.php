@@ -58,11 +58,25 @@ switch ($action) {
 
             $fields = [];
 
+            $bean = BeanFactory::getBean($rel_config['module']);
+            $bean_fields = $bean->getFieldDefinitions();
+
             foreach ($rel_config['phone_fields'] as $phone_field) {
-                $fields[] = "`$module_t`.`$phone_field` = '{$callBean->asterlink_cid_c}'";
+                if (!isset($bean_fields[$phone_field])) {
+                    continue;
+                }
+
+                $cstm = '';
+
+                // Custom fields are from a separate table with _cstm suffix.
+                if (isset($bean_fields[$phone_field]['source']) && $bean_fields[$phone_field]['source'] == 'custom_fields') {
+                    $cstm = '_cstm';
+                }
+
+                $fields[] = "`$module_t$cstm`.`$phone_field` = '{$callBean->asterlink_cid_c}'";
             }
 
-            $rel = BeanFactory::getBean($rel_config['module'])->get_list("", implode(' OR ', $fields), 0, 1);
+            $rel = $bean->get_list("", implode(' OR ', $fields), 0, 1);
             
             if (!count($rel['list'])) {
                 continue;
