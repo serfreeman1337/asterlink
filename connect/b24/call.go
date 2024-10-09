@@ -31,6 +31,7 @@ func (b *b24) Start(c *connect.Call) {
 		Type      int    `json:"TYPE"`
 		DID       string `json:"LINE_NUMBER"`
 		CRMCreate int    `json:"CRM_CREATE"`
+		Show      int    `json:"SHOW"`
 	}
 
 	params.UID = uID
