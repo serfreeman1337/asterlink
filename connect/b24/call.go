@@ -1,8 +1,12 @@
 package b24
 
 import (
+	"encoding/base64"
+	"io"
+	"os"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -79,6 +83,13 @@ func (b *b24) StopDial(c *connect.Call, ext string) {
 func (b *b24) Answer(c *connect.Call, ext string) {
 }
 
+type AttachRecord struct {
+	CallID     string `json:"CALL_ID"`
+	FileName   string `json:"FILENAME"`
+	RecURL     string `json:"RECORD_URL,omitempty"`
+	B64Content string `json:"FILE_CONTENT,omitempty"`
+}
+
 func (b *b24) End(c *connect.Call, cause string) {
 	e, ok := b.ent[c.LID]
 	if !ok || !e.isRegistred() {
@@ -133,16 +144,38 @@ func (b *b24) End(c *connect.Call, cause string) {
 	}
 
 	// upload recording
-	if b.cfg.RecUp != "" && !c.TimeAnswer.IsZero() && c.Rec != "" {
-		file := path.Base(c.Rec)
-		url := b.cfg.RecUp + c.Rec
+	if (b.cfg.RecDir != "" || b.cfg.RecUp != "") && !c.TimeAnswer.IsZero() && c.Rec != "" {
+		e.log.WithFields(log.Fields{"path": c.Rec}).Debug("Attaching call record")
 
-		e.log.WithFields(log.Fields{url: url}).Debug("Attaching call record")
-		b.req("telephony.externalCall.attachRecord", map[string]string{
-			"CALL_ID":    e.ID,
-			"FILENAME":   file,
-			"RECORD_URL": url,
-		}, nil)
+		r := AttachRecord{CallID: e.ID, FileName: path.Base(c.Rec)}
+
+		if b.cfg.RecDir != "" { // Encode call record into base64.
+			f, err := os.Open(b.cfg.RecDir + "/" + c.Rec)
+			if err != nil {
+				e.log.WithFields(log.Fields{"err": err}).Warn("Failed to open record file")
+				return
+			}
+
+			recordFileB64 := &strings.Builder{}
+			encoder := base64.NewEncoder(base64.StdEncoding, recordFileB64)
+			_, err = io.Copy(encoder, f)
+			encoder.Close()
+			f.Close()
+
+			if err != nil {
+				e.log.WithFields(log.Fields{"err": err}).Warn("Failed to encode record file")
+				return
+			}
+
+			r.B64Content = recordFileB64.String()
+		} else if b.cfg.RecUp != "" {
+			r.RecURL = b.cfg.RecUp + c.Rec
+		}
+
+		err = b.req("telephony.externalCall.attachRecord", &r, nil)
+		if err != nil {
+			e.log.WithFields(log.Fields{"err": err}).Warn("Failed to upload record file")
+		}
 	}
 }
 

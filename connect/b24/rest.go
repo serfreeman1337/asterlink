@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
@@ -103,14 +104,20 @@ ret:
 }
 
 func (b *b24) req(method string, params interface{}, result interface{}) (err error) {
-	data, err := json.Marshal(params)
+	data := &bytes.Buffer{}
+	err = json.NewEncoder(data).Encode(params)
 	if err != nil {
 		b.log.Error(err)
 		return
 	}
+
+	if method == "telephony.externalCall.attachRecord" {
+		params.(*AttachRecord).B64Content = "< REMOVED >"
+	}
+
 	b.log.WithFields(log.Fields{"method": method}).Trace(params)
 
-	res, err := b.netClient.Post(b.cfg.URL+method+"/", "application/json", bytes.NewBuffer(data))
+	res, err := b.netClient.Post(b.cfg.URL+method+"/", "application/json", data)
 	if err != nil {
 		b.log.Error(err)
 		return
@@ -119,7 +126,8 @@ func (b *b24) req(method string, params interface{}, result interface{}) (err er
 
 	if res.StatusCode != http.StatusOK {
 		err = errors.New(res.Status)
-		b.log.Error(err)
+		stuff, _ := io.ReadAll(res.Body)
+		b.log.WithFields(log.Fields{"msg": string(stuff)}).Error(err)
 		return
 	}
 

@@ -18,6 +18,7 @@ type Config struct {
 	URL          string `yaml:"webhook_url"`
 	Token        string `yaml:"webhook_originate_token"`
 	RecUp        string `yaml:"rec_upload"`
+	RecDir       string `yaml:"rec_dir"`
 	HasFindForm  bool
 	FindForm     []struct {
 		R    *regexp.Regexp
