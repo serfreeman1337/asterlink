@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func (b *b24) apiOriginateHandler(w http.ResponseWriter, r *http.Request) {
@@ -32,7 +33,29 @@ func (b *b24) apiOriginateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	b.originate(ext, r.FormValue("data[PHONE_NUMBER_INTERNATIONAL]"), r.FormValue("data[CALL_ID]"))
+	oID := r.FormValue("data[CALL_ID]")
+
+	b.oIDsMu.Lock()
+	_, ok = b.oIDs[oID]
+
+	if ok {
+		b.oIDsMu.Unlock()
+		cLog.WithField("oID", oID).Warn("ignoring request with the same oID")
+		w.Write([]byte("why are you like this"))
+		return
+	}
+
+	b.oIDs[oID] = struct{}{}
+	b.oIDsMu.Unlock()
+
+	go func() {
+		time.Sleep(30 * time.Second)
+		b.oIDsMu.Lock()
+		delete(b.oIDs, oID)
+		b.oIDsMu.Unlock()
+	}()
+
+	b.originate(ext, r.FormValue("data[PHONE_NUMBER_INTERNATIONAL]"), oID)
 	w.WriteHeader(http.StatusOK)
 }
 

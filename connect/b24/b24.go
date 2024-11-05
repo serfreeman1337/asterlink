@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"net/http"
 	"regexp"
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -37,6 +38,9 @@ type b24 struct {
 	log       *log.Entry
 	netClient *http.Client
 	causeCode map[string]string
+
+	oIDsMu sync.Mutex
+	oIDs   map[string]struct{}
 }
 
 func (b *b24) Init() {
@@ -92,6 +96,7 @@ func New(cfg *Config) connect.Connecter {
 			"34": "503",
 			"42": "503",
 		},
+		oIDs: map[string]struct{}{},
 	}
 
 	log.Info("Using Bitrix24 Connector")
