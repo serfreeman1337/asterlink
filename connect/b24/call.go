@@ -54,7 +54,9 @@ func (b *b24) Start(c *connect.Call) {
 
 	var r struct {
 		Result struct {
-			ID string `json:"CALL_ID"`
+			ID            string `json:"CALL_ID"`
+			CRMEntityID   int    `json:"CRM_ENTITY_ID"`
+			CRMEntityType string `json:"CRM_ENTITY_TYPE"`
 		}
 	}
 	err := b.req("telephony.externalcall.register", params, &r)
@@ -67,6 +69,22 @@ func (b *b24) Start(c *connect.Call) {
 	}
 
 	e.ID = r.Result.ID
+
+	if r.Result.CRMEntityID != 0 {
+		e.CRMEntityID = r.Result.CRMEntityID
+		switch r.Result.CRMEntityType {
+		case "CONTACT":
+			e.CRMEntityType = CRMEntityTypeContact
+		case "COMPANY":
+			e.CRMEntityType = CRMEntityTypeCompany
+		case "LEAD":
+			e.CRMEntityType = CRMEntityTypeLead
+		default:
+			r.Result.CRMEntityID = 0
+			e.log.WithField("type", r.Result.CRMEntityType).Warn("Unknown CRM entity type")
+		}
+	}
+
 	e.log.WithField("id", e.ID).Debug("Call registred")
 
 	e.mux.Unlock()
@@ -81,6 +99,86 @@ func (b *b24) StopDial(c *connect.Call, ext string) {
 }
 
 func (b *b24) Answer(c *connect.Call, ext string) {
+	if !b.cfg.UpdateAssigned {
+		return
+	}
+
+	e, ok := b.ent[c.LID]
+	if !ok || !e.isRegistred() {
+		return
+	}
+
+	if e.CRMEntityID == 0 {
+		return
+	}
+
+	uID, ok := b.eUID[c.Ext]
+	if !ok {
+		return
+	}
+
+	var err error
+	var contactLeadID int
+
+	var method string
+	switch e.CRMEntityType {
+	case CRMEntityTypeLead:
+		method = "lead"
+
+		if b.cfg.LeadsDeals {
+			method = "deal"
+		}
+	case CRMEntityTypeContact:
+		method = "contact"
+
+		var r struct {
+			Result struct {
+				LeadID string `json:"LEAD_ID"`
+			} `json:"result"`
+		}
+
+		err = b.req("crm."+method+".get", struct {
+			ID int `json:"id"`
+		}{e.CRMEntityID}, &r)
+
+		if err != nil {
+			e.log.WithFields(log.Fields{"err": err}).Warn("Failed to get contact details")
+		}
+
+		if r.Result.LeadID != "" {
+			contactLeadID, _ = strconv.Atoi(r.Result.LeadID)
+		}
+	default:
+		return
+	}
+
+	type fields struct {
+		Assigned int `json:"ASSIGNED_BY_ID"`
+	}
+
+	req := struct {
+		ID     int    `json:"id"`
+		Fields fields `json:"fields"`
+	}{
+		ID:     e.CRMEntityID,
+		Fields: fields{uID},
+	}
+
+	err = b.req("crm."+method+".update", req, nil)
+
+	if err == nil && contactLeadID != 0 { // Update contact's lead as well.
+		req.ID = contactLeadID
+
+		method = "lead"
+		if b.cfg.LeadsDeals {
+			method = "deal"
+		}
+		err = b.req("crm."+method+".update", req, nil)
+	}
+
+	if err != nil {
+		e.log.WithFields(log.Fields{"err": err}).Warn("Failed to change assigned contact")
+	}
 }
 
 type AttachRecord struct {
