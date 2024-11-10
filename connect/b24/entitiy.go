@@ -19,6 +19,7 @@ type entity struct {
 	cID           string
 	CRMEntityID   int
 	CRMEntityType CRMEntityType
+	CRMAssignedID int
 	log           *log.Entry
 	mux           sync.Mutex
 }

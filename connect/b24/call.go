@@ -72,16 +72,40 @@ func (b *b24) Start(c *connect.Call) {
 
 	if r.Result.CRMEntityID != 0 {
 		e.CRMEntityID = r.Result.CRMEntityID
+
+		var method string
 		switch r.Result.CRMEntityType {
 		case "CONTACT":
 			e.CRMEntityType = CRMEntityTypeContact
+
+			method = "contact"
 		case "COMPANY":
 			e.CRMEntityType = CRMEntityTypeCompany
 		case "LEAD":
 			e.CRMEntityType = CRMEntityTypeLead
+
+			method = "lead"
+			if b.cfg.LeadsDeals {
+				method = "deal"
+			}
 		default:
 			r.Result.CRMEntityID = 0
 			e.log.WithField("type", r.Result.CRMEntityType).Warn("Unknown CRM entity type")
+		}
+
+		if method != "" { // Query lead/contact assigned id.
+			var r struct {
+				Result struct {
+					AssignedID string `json:"ASSIGNED_BY_ID"`
+				} `json:"result"`
+			}
+
+			err := b.req("crm."+method+".get", struct {
+				ID int `json:"id"`
+			}{e.CRMEntityID}, &r)
+			if err == nil {
+				e.CRMAssignedID, _ = strconv.Atoi(r.Result.AssignedID)
+			}
 		}
 	}
 
@@ -117,6 +141,10 @@ func (b *b24) Answer(c *connect.Call, ext string) {
 		return
 	}
 
+	if e.CRMAssignedID == uID { // No need to update assigned.
+		return
+	}
+
 	var err error
 	var contactLeadID int
 
@@ -145,9 +173,7 @@ func (b *b24) Answer(c *connect.Call, ext string) {
 			e.log.WithFields(log.Fields{"err": err}).Warn("Failed to get contact details")
 		}
 
-		if r.Result.LeadID != "" {
-			contactLeadID, _ = strconv.Atoi(r.Result.LeadID)
-		}
+		contactLeadID, _ = strconv.Atoi(r.Result.LeadID)
 	default:
 		return
 	}

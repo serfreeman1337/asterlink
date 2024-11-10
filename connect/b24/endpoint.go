@@ -76,21 +76,29 @@ func (b *b24) apiAssignedHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// search for contact
-	contact, err := b.findContact(e.cID)
-	if err != nil {
+	assignedID := e.CRMAssignedID
+
+	// Try to search with the CallerID.
+	if assignedID == 0 {
+		contact, err := b.findContact(e.cID)
+		if err == nil {
+			assignedID = contact.Assigned
+		}
+	}
+
+	if assignedID == 0 {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	ext, ok := b.uIDtoExt(contact.Assigned)
+	ext, ok := b.uIDtoExt(assignedID)
 	if !ok {
-		cLog.WithField("uid", contact.Assigned).Warn("Extension not found for user id")
+		cLog.WithField("uid", assignedID).Warn("Extension not found for user id")
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	fmt.Fprintf(w, "%s", ext)
+	fmt.Fprint(w, ext)
 }
 
 func (b *b24) uIDtoExt(uID int) (string, bool) {
