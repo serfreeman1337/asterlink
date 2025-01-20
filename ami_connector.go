@@ -249,6 +249,14 @@ func (a *amiConnector) onDialBegin(e map[string]string) {
 			return
 		}
 
+		// DID Limit
+		if a.cfg.Form.hasDid {
+			if _, ok := a.cfg.Form.DID[e["DestConnectedLineNum"]]; !ok {
+				log.WithFields(log.Fields{"lid": e["Linkedid"], "did": e["DestConnectedLineNum"]}).Debug("Skip outgoing call for DID")
+				return
+			}
+		}
+
 		cID, ok := a.formatNum(e["DestCallerIDNum"], true)
 		if !ok {
 			log.WithFields(log.Fields{"lid": e["Linkedid"], "cid": e["DestCallerIDNum"]}).Warn("Unknown outgoing CallerID")
@@ -454,7 +462,7 @@ func (a *amiConnector) onHangup(e map[string]string) {
 
 		delete(a.cdr, e["Linkedid"])
 	} else {
-		if e["Context"] == a.cfg.DP.Dial && e["ChannelState"] == "5" {
+		if e["Context"] == a.cfg.DP.Dial && (e["ChannelState"] == "5" || e["ChannelState"] == "0") {
 			c.Log.WithField("ext", e["CallerIDNum"]).Debug("Dial stop")
 			go a.connector.StopDial(c, e["CallerIDNum"])
 		}
