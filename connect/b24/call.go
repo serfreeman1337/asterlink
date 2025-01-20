@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -123,12 +124,18 @@ func (b *b24) StopDial(c *connect.Call, ext string) {
 }
 
 func (b *b24) Answer(c *connect.Call, ext string) {
-	if !b.cfg.UpdateAssigned {
+	e, ok := b.ent[c.LID]
+	if !ok || !e.isRegistred() {
 		return
 	}
 
-	e, ok := b.ent[c.LID]
-	if !ok || !e.isRegistred() {
+	b.showsHidesMu.Lock()
+	if d, ok := b.showHides[e.ID]; ok {
+		d.t.Reset(0) // Send show/hide requests on Answer.
+	}
+	b.showsHidesMu.Unlock()
+
+	if !b.cfg.UpdateAssigned {
 		return
 	}
 
@@ -221,6 +228,12 @@ func (b *b24) End(c *connect.Call, cause string) {
 	}
 	defer delete(b.ent, c.LID)
 
+	b.showsHidesMu.Lock() // Cancel any show/hide requests since Bitrix24 hides call card on finish anyway.
+	if d, ok := b.showHides[e.ID]; ok {
+		d.t.Stop()
+	}
+	b.showsHidesMu.Unlock()
+
 	uID, ok := b.eUID[c.Ext]
 	if !ok {
 		uID = b.cfg.DefUID
@@ -312,6 +325,71 @@ func (b *b24) handleDial(c *connect.Call, ext string, isDial bool) {
 	uID, ok := b.eUID[ext]
 	if !ok {
 		e.log.WithField("ext", ext).Warn("Cannot find user id for extension")
+		return
+	}
+
+	if c.Dir == connect.In { // Batch show/hide requests to improve performance with DND operators and ringalls queues.
+		b.showsHidesMu.Lock()
+		d, ok := b.showHides[e.ID]
+		if !ok {
+			t := time.AfterFunc(500*time.Millisecond, func() {
+				b.showsHidesMu.Lock()
+
+				d, ok := b.showHides[e.ID]
+				if !ok {
+					b.showsHidesMu.Unlock()
+					return
+				}
+
+				req := func(uIDs []int, method string) {
+					if len(uIDs) == 1 { // Send one uID.
+						b.req(method, struct {
+							ID  string `json:"CALL_ID"`
+							UID int    `json:"USER_ID"`
+						}{e.ID, uIDs[0]}, nil)
+					} else { // Or send array of UIDs.
+						b.req(method, struct {
+							ID  string `json:"CALL_ID"`
+							UID []int  `json:"USER_ID"`
+						}{e.ID, uIDs}, nil)
+					}
+				}
+
+				if len(d.showUIDs) != 0 {
+					req(d.showUIDs, "telephony.externalcall.show")
+				}
+
+				if len(d.hideUIDs) != 0 {
+					req(d.hideUIDs, "telephony.externalcall.hide")
+				}
+
+				delete(b.showHides, e.ID)
+				b.showsHidesMu.Unlock()
+			})
+
+			d = &delayedShowHide{t, nil, nil}
+			b.showHides[e.ID] = d
+		} else {
+			d.t.Reset(500 * time.Millisecond)
+		}
+
+		if isDial {
+			if !slices.Contains(d.showUIDs, uID) { // New show UID.
+				d.showUIDs = append(d.showUIDs, uID)
+
+				if p := slices.Index(d.hideUIDs, uID); p != -1 { // Cancel its hide request.
+					d.hideUIDs = slices.Delete(d.hideUIDs, p, p+1)
+				}
+			}
+		} else {
+			if p := slices.Index(d.showUIDs, uID); p != -1 { // Cancel a show request.
+				d.showUIDs = slices.Delete(d.showUIDs, p, p+1)
+			} else {
+				d.hideUIDs = append(d.hideUIDs, uID) // New hide request.
+			}
+		}
+
+		b.showsHidesMu.Unlock()
 		return
 	}
 

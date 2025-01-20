@@ -32,6 +32,12 @@ type Config struct {
 	LeadsDeals     bool `yaml:"leads_deals"`
 }
 
+type delayedShowHide struct {
+	t        *time.Timer
+	showUIDs []int
+	hideUIDs []int
+}
+
 type b24 struct {
 	cfg       *Config
 	eUID      map[string]int
@@ -43,6 +49,9 @@ type b24 struct {
 
 	oIDsMu sync.Mutex
 	oIDs   map[string]struct{}
+
+	showsHidesMu sync.Mutex
+	showHides    map[string]*delayedShowHide
 }
 
 func (b *b24) Init() {
@@ -98,7 +107,8 @@ func New(cfg *Config) connect.Connecter {
 			"34": "503",
 			"42": "503",
 		},
-		oIDs: map[string]struct{}{},
+		oIDs:      map[string]struct{}{},
+		showHides: map[string]*delayedShowHide{},
 	}
 
 	log.Info("Using Bitrix24 Connector")
