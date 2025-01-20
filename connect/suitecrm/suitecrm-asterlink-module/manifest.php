@@ -171,16 +171,44 @@ global $sugar_config;
 
 if (!empty($sugar_config) && strpos($sugar_config['suitecrm_version'], '8.') === 0) {
     unset($installdefs['logic_hooks']);
-    $installdefs['copy'][] = [
-        'from' => '<basepath>/extensions/asterlink',
-        'to' => '../../extensions/asterlink',
-    ];
-
-    foreach ($upgrade_manifest['upgrade_paths'] as $ver => &$data) {
-        $data['copy'][] = [
+    // $installdefs['copy'][] = [
+    //     'from' => '<basepath>/extensions/asterlink',
+    //     'to' => '../../extensions/asterlink',
+    // ];
+    // 
+    // foreach ($upgrade_manifest['upgrade_paths'] as $ver => &$data) {
+    //     $data['copy'][] = [
+    //         'from' => '<basepath>/extensions/asterlink',
+    //         'to' => '../../extensions/asterlink',
+    //     ];
+    // }
+    
+    // Workaround of inability to use 'copy' key after the following commit:
+    // https://github.com/salesagility/SuiteCRM/commit/e572230abd0dad205b24a96acce72590b20bf69d
+    foreach ($installdefs as $k => &$v) {
+        if ($k != 'copy') {
+            continue;
+        }
+        
+        $v[] = [
             'from' => '<basepath>/extensions/asterlink',
             'to' => '../../extensions/asterlink',
         ];
+        break;
+    }
+    
+    foreach ($upgrade_manifest['upgrade_paths'] as $ver => &$data) {
+        foreach ($data as $k => &$v) {
+            if ($k != 'copy') {
+                continue;
+            }
+            
+            $v[] = [
+                'from' => '<basepath>/extensions/asterlink',
+                'to' => '../../extensions/asterlink',
+            ];
+            break;
+        }
     }
 }
 
