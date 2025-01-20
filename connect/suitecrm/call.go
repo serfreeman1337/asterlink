@@ -9,6 +9,7 @@ import (
 const mysqlFormat = "2006-01-02 15:04:05"
 
 func (s *suitecrm) Start(c *connect.Call) {
+	s.m.Lock()
 	s.ent[c.LID] = &entity{
 		Dir: c.Dir,
 		DID: c.DID,
@@ -18,12 +19,15 @@ func (s *suitecrm) Start(c *connect.Call) {
 	}
 
 	e := s.ent[c.LID]
+	s.m.Unlock()
 
 	e.mux.Lock()
 	defer e.mux.Unlock()
 
 	if err := s.createCallRecord(c, e); err != nil {
+		s.m.Lock()
 		delete(s.ent, c.LID)
+		s.m.Unlock()
 		return
 	}
 
@@ -38,7 +42,10 @@ func (s *suitecrm) OrigStart(c *connect.Call, oID string) {
 
 		log: s.log.WithField("lid", c.LID),
 	}
+
+	s.m.Lock()
 	s.ent[c.LID] = e
+	s.m.Unlock()
 
 	// TODO: rewrite
 	e.mux.Lock()
@@ -52,7 +59,10 @@ func (s *suitecrm) OrigStart(c *connect.Call, oID string) {
 }
 
 func (s *suitecrm) Dial(c *connect.Call, ext string) {
+	s.m.Lock()
 	e, ok := s.ent[c.LID]
+	s.m.Unlock()
+
 	if !ok || !e.isRegistred() {
 		return
 	}
@@ -76,7 +86,9 @@ func (s *suitecrm) Dial(c *connect.Call, ext string) {
 }
 
 func (s *suitecrm) StopDial(c *connect.Call, ext string) {
+	s.m.Lock()
 	e, ok := s.ent[c.LID]
+	s.m.Unlock()
 	if !ok || !e.isRegistred() {
 		return
 	}
@@ -86,12 +98,16 @@ func (s *suitecrm) StopDial(c *connect.Call, ext string) {
 }
 
 func (s *suitecrm) Answer(c *connect.Call, ext string) {
+	s.m.Lock()
 	uID, ok := s.extUID[c.Ext]
+	s.m.Unlock()
 	if !ok {
 		return
 	}
 
+	s.m.Lock()
 	e, ok := s.ent[c.LID]
+	s.m.Unlock()
 	if !ok || !e.isRegistred() {
 
 		return
@@ -128,11 +144,17 @@ func (s *suitecrm) Answer(c *connect.Call, ext string) {
 }
 
 func (s *suitecrm) End(c *connect.Call, cause string) {
+	s.m.Lock()
 	e, ok := s.ent[c.LID]
+	s.m.Unlock()
 	if !ok || !e.isRegistred() {
 		return
 	}
-	defer delete(s.ent, c.LID)
+	defer func() {
+		s.m.Lock()
+		delete(s.ent, c.LID)
+		s.m.Unlock()
+	}()
 
 	e.exts.Range(func(key interface{}, value interface{}) bool {
 		e.exts.Delete(key)
