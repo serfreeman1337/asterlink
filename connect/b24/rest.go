@@ -139,6 +139,8 @@ func (b *b24) req(method string, params interface{}, result interface{}) (err er
 		}
 
 		b.log.WithFields(log.Fields{"method": method}).Trace(result)
+	} else {
+		io.Copy(io.Discard, res.Body)
 	}
 
 	return
