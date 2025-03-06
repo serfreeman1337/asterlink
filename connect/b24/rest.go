@@ -61,6 +61,7 @@ func (b *b24) findContact(phone string) (*contactInfo, error) {
 func (b *b24) updateUsers() {
 	nTotal := 1
 	nRet := 0
+	clear(b.eUID)
 
 ret:
 	for nTotal > nRet {

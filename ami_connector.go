@@ -178,6 +178,7 @@ func (a *amiConnector) onConnect(message string) {
 	}
 
 	filter += "|Event: (Hangup|BlindTransfer)|Variable: SF_CONNECTOR)"
+	filter += "|Event: Reload"
 
 	// let the Asterisk filter events for us
 	res, err := a.ami.Action(map[string]string{"Action": "Filter", "Operation": "Add", "Filter": filter})
@@ -506,6 +507,10 @@ func (a *amiConnector) onVarSet(e map[string]string) {
 	c.Vote = "-"
 }
 
+func (a *amiConnector) onReload(e map[string]string) {
+	a.connector.Reload()
+}
+
 func (a *amiConnector) SetConnector(cc connect.Connecter) {
 	a.connector = cc
 }
@@ -569,6 +574,7 @@ func NewAmiConnector(cfg *AmiConfig) (a *amiConnector, err error) {
 	a.ami.RegisterHandler("BlindTransfer", a.onBlindTransfer)
 	a.ami.RegisterHandler("Hangup", a.onHangup)
 	a.ami.RegisterHandler("VarSet", a.onVarSet)
+	a.ami.RegisterHandler("Reload", a.onReload)
 
 	return
 }

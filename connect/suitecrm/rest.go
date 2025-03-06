@@ -55,6 +55,7 @@ func (s *suitecrm) createCallRecord(c *connect.Call, e *entity) (err error) {
 }
 
 func (s *suitecrm) getExtUsers() (err error) {
+	clear(s.extUID)
 	err = s.rest("GET", "get_ext_users", nil, &s.extUID)
 	if err != nil {
 		return

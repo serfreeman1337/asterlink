@@ -60,6 +60,10 @@ func (s *suitecrm) Init() {
 	}
 }
 
+func (s *suitecrm) Reload() {
+	s.getExtUsers()
+}
+
 func (s *suitecrm) SetOriginate(orig connect.OrigFunc) {
 	s.originate = orig
 }

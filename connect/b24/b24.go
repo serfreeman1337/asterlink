@@ -70,6 +70,10 @@ func (b *b24) Init() {
 	}
 }
 
+func (b *b24) Reload() {
+	b.updateUsers()
+}
+
 func (b *b24) SetOriginate(orig connect.OrigFunc) {
 	b.originate = orig
 }

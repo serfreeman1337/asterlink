@@ -6,6 +6,9 @@ type du struct {
 func (con *du) Init() {
 }
 
+func (con *du) Reload() {
+}
+
 func (con *du) Start(c *Call) {
 }
 

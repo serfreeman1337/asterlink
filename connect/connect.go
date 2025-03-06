@@ -39,6 +39,7 @@ type OrigFunc func(ext string, dest string, oID string)
 // Connecter interface
 type Connecter interface {
 	Init()
+	Reload()
 	Start(call *Call)
 	OrigStart(call *Call, oID string)
 	Dial(call *Call, ext string)
