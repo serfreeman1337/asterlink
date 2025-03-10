@@ -10,9 +10,12 @@ dialplan:
   - from-pstn
   outgoing_context:
   - macro-dialout-trunk
+  - trunk-dial-with-exten
   ext_context:
   - macro-dial-one
   - macro-dial
+  - dialOne-with-exten
+  - dial-with-exten
   dial_context: from-internal
 # pbx:
 #   dids:
