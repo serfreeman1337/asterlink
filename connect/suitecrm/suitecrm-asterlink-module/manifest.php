@@ -3,7 +3,7 @@
 $manifest = [
     'name' => 'AsterLink',
     'description' => 'Asterisk PBX integration with SuiteCRM',
-    'version' => '0.5.1',
+    'version' => '0.6.0',
     'author' => 'serfreeman1337',
     'readme' => '',
     'acceptable_sugar_versions' => [
@@ -11,7 +11,7 @@ $manifest = [
     ],
     'icon' => '',
     'is_uninstallable' => true,
-    'published_date' => '2024-02-04',
+    'published_date' => '2025-03-10',
     'type' => 'module',
     'remove_tables' => 'prompt',
 ];
@@ -167,9 +167,9 @@ $upgrade_manifest = [
 ];
  
 // SuiteCRM 8 support
-global $sugar_config;
+global $suitecrm_version;
 
-if (!empty($sugar_config) && strpos($sugar_config['suitecrm_version'], '8.') === 0) {
+if (!empty($suitecrm_version) && strpos($suitecrm_version, '8.') === 0) {
     unset($installdefs['logic_hooks']);
     // $installdefs['copy'][] = [
     //     'from' => '<basepath>/extensions/asterlink',

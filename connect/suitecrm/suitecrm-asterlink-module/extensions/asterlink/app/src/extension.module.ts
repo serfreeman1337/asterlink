@@ -1,23 +1,23 @@
-import { NgModule, ApplicationRef, ComponentRef, EmbeddedViewRef, createComponent } from '@angular/core';
+import { NgModule, ApplicationRef, ComponentRef, EmbeddedViewRef, createComponent, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { takeWhile } from 'rxjs/operators';
 
 import { AppStateStore, FieldRegistry, ImageModule } from 'core';
 
-import { AsterlinkService } from '../services/asterlink.service';
+import { AsterlinkService } from './services/asterlink.service';
 
-import { AsterLinkComponent } from '../components/asterlink/asterlink.component';
-import { CallCardComponent } from '../components/call-card/call-card.component';
-import { PhoneFieldComponent } from '../fields/phone-field/phone-field.component';
+import { AsterLinkComponent } from './components/asterlink/asterlink.component';
+import { CallCardComponent } from './components/call-card/call-card.component';
+import { PhoneFieldComponent } from './fields/phone-field/phone-field.component';
 
-import { StopTelLinkDirective } from '../directives/stop-tel-link.directive';
-import { TelLinkPipe } from '../pipes/tel-link.pipe';
-import { AppStringsPipe } from '../pipes/app-strings.pipe';
-import { ModuleNamePipe } from '../pipes/module-name.pipe';
-import { CallDurationPipe } from '../pipes/call-duration.pipe';
-import { RecordLinkPipe } from '../pipes/record-link.pipe';
-import { RelQueryParam } from '../pipes/rel-query-param.pipe';
+import { StopTelLinkDirective } from './directives/stop-tel-link.directive';
+import { TelLinkPipe } from './pipes/tel-link.pipe';
+import { AppStringsPipe } from './pipes/app-strings.pipe';
+import { ModuleNamePipe } from './pipes/module-name.pipe';
+import { CallDurationPipe } from './pipes/call-duration.pipe';
+import { RecordLinkPipe } from './pipes/record-link.pipe';
+import { RelQueryParam } from './pipes/rel-query-param.pipe';
 
 @NgModule({
     declarations: [
@@ -44,12 +44,12 @@ import { RelQueryParam } from '../pipes/rel-query-param.pipe';
 export class ExtensionModule {
     private componentRef?: ComponentRef<AsterLinkComponent>;
 
-    constructor(
-        private fieldRegistry: FieldRegistry,
-        private appRef: ApplicationRef,
-        private asterlinkService: AsterlinkService,
-        private appStateStore: AppStateStore
-    ) {
+    private fieldRegistry = inject(FieldRegistry);
+    private appRef = inject(ApplicationRef);
+    private asterlinkService = inject(AsterlinkService);
+    private appStateStore = inject(AppStateStore);
+    
+    constructor() {
         // Override phone fields.
         this.fieldRegistry.register('default', 'phone', 'list', PhoneFieldComponent);
         this.fieldRegistry.register('default', 'phone', 'detail', PhoneFieldComponent);

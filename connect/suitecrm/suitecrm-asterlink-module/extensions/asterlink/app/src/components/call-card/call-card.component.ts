@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, inject, Input } from '@angular/core';
 import { AsterlinkService } from '../../services/asterlink.service';
 
 @Component({
@@ -15,8 +15,5 @@ export class CallCardComponent {
     @Input() time: string;
     @Input() relations: any;
 
-    constructor(
-        public asterlinkService: AsterlinkService
-    ) {
-    }
+    public asterlinkService = inject(AsterlinkService);
 }

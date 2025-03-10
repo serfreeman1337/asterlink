@@ -1,5 +1,5 @@
-import { Component, OnInit } from '@angular/core';
-import { trigger, state, style, transition, animate } from '@angular/animations';
+import { Component, inject } from '@angular/core';
+import { trigger, style, transition, animate } from '@angular/animations';
 import { AsterlinkService } from '../../services/asterlink.service';
 
 @Component({
@@ -17,9 +17,6 @@ import { AsterlinkService } from '../../services/asterlink.service';
         ])
     ],
 })
-export class AsterLinkComponent implements OnInit {
-    constructor(public asterlinkService: AsterlinkService) {}
-
-    ngOnInit() {
-    }
+export class AsterLinkComponent {
+    public asterlinkService = inject(AsterlinkService);
 }

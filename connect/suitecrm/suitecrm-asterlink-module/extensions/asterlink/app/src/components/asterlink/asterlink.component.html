@@ -1,5 +1,5 @@
 <asterlink-call-card 
-  *ngFor="let call of asterlinkService.calls" 
+  *ngFor="let call of asterlinkService.calls()" 
   [isAnswered]="call.answered" 
   [cid]="call.cid"
   [did]="call.did"

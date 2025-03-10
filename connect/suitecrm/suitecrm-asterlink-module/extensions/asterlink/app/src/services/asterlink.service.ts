@@ -1,8 +1,7 @@
-import { Injectable, NgZone, OnDestroy } from '@angular/core';
-import { throwError, timer, Subscription, Subject, BehaviorSubject, Observable } from 'rxjs';
+import { inject, Injectable, OnDestroy, signal } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Subscription, BehaviorSubject } from 'rxjs';
 import { AuthService } from 'core';
-import { WebSocketSubject, webSocket } from 'rxjs/webSocket';
 
 @Injectable({
     providedIn: 'root'
@@ -10,7 +9,9 @@ import { WebSocketSubject, webSocket } from 'rxjs/webSocket';
 export class AsterlinkService implements OnDestroy {
     private authSub: Subscription;
 
-    calls = [];
+    calls = signal([], {
+        equal: () => false
+    });
 
     ready = false;
     ready$ = new BehaviorSubject<boolean>(this.ready);
@@ -23,11 +24,10 @@ export class AsterlinkService implements OnDestroy {
     private isUserLoggedIn = false;
     private worker?: SharedWorker;
 
-    constructor(
-        private http: HttpClient, 
-        private authService: AuthService,
-        private zone: NgZone
-    ) {
+    private http = inject(HttpClient);
+    private authService = inject(AuthService);
+
+    constructor() {
         this.authSub = this.authService.isUserLoggedIn.subscribe(val => {
             if (this.isUserLoggedIn == val)
                 return;
@@ -97,27 +97,31 @@ export class AsterlinkService implements OnDestroy {
         this.worker = new SharedWorker('modules/AsterLink/javascript/asterlink.worker.js');
 
         this.worker.port.onmessage = e => {
-            this.zone.run(() => {
-                if (!e.data) {
-                    if (!e.data) { // Worker disconnected from stream.
-                        this.calls = [];
-                        return;
-                    }
+            if (!e.data) {
+                if (!e.data) { // Worker disconnected from stream.
+                    this.calls.update(calls => {
+                        calls.length = 0;
+                        return calls;
+                    });
+                    return;
                 }
-    
-                const { show, data } = e.data;
+            }
+
+            const { show, data } = e.data;
+            this.calls.update(calls => {
+                const id = calls.findIndex(c => c.id == data.id);
                 
-                const id = this.calls.findIndex(c => c.id == data.id);
-              
                 if (show) {
                     if (id == -1) {
-                        this.calls.push(data);
+                        calls.push(data);
                     } else {
-                        Object.assign(this.calls[id], data);
+                        Object.assign(calls[id], data);
                     }
                 } else {
-                    this.calls.splice(id, 1);
+                    calls.splice(id, 1);
                 }
+
+                return calls;
             });
         };
 
