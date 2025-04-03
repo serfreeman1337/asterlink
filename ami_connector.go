@@ -297,9 +297,18 @@ func (a *amiConnector) onDialBegin(e map[string]string) {
 			c.Ch = e["DestChannel"]
 			c.Ext = e["DestCallerIDNum"]
 
-			c.Log.WithField("ext", c.Ext).Debug("From")
 			a.useRec(c, e["Uniqueid"], e["Linkedid"])
 
+			// Track multiple contact dials.
+			if c.ExtDials == nil {
+				c.ExtDials = map[string]int{}
+			}
+			c.ExtDials[c.Ext]++
+			if c.ExtDials[c.Ext] > 1 { // Don't notify when dialing other contacts.
+				return
+			}
+
+			c.Log.WithField("ext", c.Ext).Debug("From")
 			go a.connector.Dial(c, c.Ext)
 		} else if a.isContext(e["Context"], a.cfg.DP.Out) {
 			// TODO: do something about originated CallerID
@@ -321,8 +330,19 @@ func (a *amiConnector) onDialBegin(e map[string]string) {
 		c.TimeDial = time.Now()
 	}
 
-	c.Log.WithField("ext", e["DestCallerIDNum"]).Debug("Dial")
-	go a.connector.Dial(c, e["DestCallerIDNum"])
+	// Track multiple contact dials.
+	ext := e["DestCallerIDNum"]
+
+	if c.ExtDials == nil {
+		c.ExtDials = map[string]int{}
+	}
+	c.ExtDials[ext]++
+	if c.ExtDials[ext] > 1 { // Don't notify when dialing other contacts.
+		return
+	}
+
+	c.Log.WithField("ext", ext).Debug("Dial")
+	go a.connector.Dial(c, ext)
 }
 
 // operator answer
@@ -353,6 +373,9 @@ func (a *amiConnector) onDialEnd(e map[string]string) {
 		go a.connector.Answer(c, c.Ext)
 	case connect.Out:
 		if c.O && !a.isContext(e["Context"], a.cfg.DP.Out) { // Originated call
+			if e["DialStatus"] == "ANSWER" { // Update source channel when dialing multiple contacts.
+				c.Ch = e["DestChannel"]
+			}
 			return
 		}
 
@@ -464,8 +487,21 @@ func (a *amiConnector) onHangup(e map[string]string) {
 		delete(a.cdr, e["Linkedid"])
 	} else {
 		if e["Context"] == a.cfg.DP.Dial && (e["ChannelState"] == "5" || e["ChannelState"] == "0") {
-			c.Log.WithField("ext", e["CallerIDNum"]).Debug("Dial stop")
-			go a.connector.StopDial(c, e["CallerIDNum"])
+			ext := e["CallerIDNum"]
+
+			// Track multiple contact dials.
+			if c.ExtDials != nil {
+				if p := c.ExtDials[ext]; p > 1 { // Don't notify when dial was canceled for other contact.
+					p--
+					c.ExtDials[ext] = p
+					return
+				} else if p == 1 {
+					delete(c.ExtDials, ext)
+				}
+			}
+
+			c.Log.WithField("ext", ext).Debug("Dial stop")
+			go a.connector.StopDial(c, ext)
 		}
 	}
 }

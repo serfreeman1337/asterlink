@@ -31,6 +31,7 @@ type Call struct {
 	Vote       string
 	O          bool
 	Log        *log.Entry
+	ExtDials   map[string]int
 }
 
 // OrigFunc ?
